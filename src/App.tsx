@@ -349,7 +349,7 @@ const styles: { [key: string]: CSSProperties } = {
   appointmentDate: {
       fontSize: '16px',
       color: '#fff',
-       marginTop: '5px',
+      marginTop: '5px',
   },
   appointmentPrize: {
       fontSize: '14px',
@@ -736,8 +736,12 @@ export default function App() {
   
   const [treatments, setTreatments] = useState<Treatment[]>(INITIAL_TREATMENTS);
   const [prizes, setPrizes] = useState<Prize[]>(INITIAL_PRIZES);
-  const [activePromotionImage, setActivePromotionImage] = useState<string | null>(null);
-  const [isSplashVisible, setIsSplashVisible] = useState(true);
+  
+  // MODIFICA QUI: Inizializza activePromotionImage da localStorage
+  const [activePromotionImage, setActivePromotionImage] = useState<string | null>(() => {
+    return localStorage.getItem('activePromotionImage');
+  });
+  const [isSplashVisible, setIsSplashVisible] = useState(false); // Inizializza a false, sarà gestito da useEffect
 
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -808,7 +812,7 @@ export default function App() {
     }
   }, [closureRequired]);
 
-  // Splash Screen Logic
+  // Splash Screen Logic (nessun cambiamento qui, funziona correttamente con la persistenza)
   useEffect(() => {
     if (activePromotionImage) {
       setIsSplashVisible(true);
@@ -931,7 +935,7 @@ export default function App() {
       }
 
       setIsGeneratingPromo(true);
-      setActivePromotionImage(null);
+      setActivePromotionImage(null); // Resetta temporaneamente l'immagine
 
       try {
           let backgroundPrompt = '';
@@ -1037,6 +1041,8 @@ export default function App() {
 
           const finalImage = canvas.toDataURL('image/png');
           setActivePromotionImage(finalImage);
+          // AGGIUNGI QUI: Salva l'immagine in localStorage
+          localStorage.setItem('activePromotionImage', finalImage);
           showAlert("Successo", "Immagine promozionale creata e impostata come splash screen!");
 
       } catch (error) {
@@ -1405,7 +1411,8 @@ export default function App() {
                 <div>
                     <h4 style={styles.subSectionTitle}>Promozione Attiva</h4>
                     <img src={activePromotionImage} alt="Anteprima promozione" style={{width: '100%', borderRadius: '10px', marginTop: '10px'}} />
-                    <button onClick={() => setActivePromotionImage(null)} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Rimuovi Promozione</button>
+                    {/* MODIFICA QUI: Rimuovi l'immagine anche da localStorage */}
+                    <button onClick={() => { setActivePromotionImage(null); localStorage.removeItem('activePromotionImage'); }} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Rimuovi Promozione</button>
                 </div>
             )}
         </div>
@@ -1455,9 +1462,9 @@ export default function App() {
             {archivedClosures.length > 0 ? (
                 archivedClosures.map(closure => (
                     <div key={closure.id} style={styles.appointmentCard}>
-                             <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
-                             <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
-                             <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
+                                 <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
+                                 <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
+                                 <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
                     </div>
                 ))
             ) : <p style={styles.noAppointmentsText}>Nessuna chiusura archiviata.</p>}
@@ -1731,8 +1738,8 @@ export default function App() {
                 <ul style={styles.managementList}>
                    {treatments.map(t => (
                        <li key={t.id} style={styles.managementListItem}>
-                           <span>{t.name} - €{t.price} ({t.duration} min)</span>
-                           <button onClick={() => handleDeleteTreatment(t.id)} style={styles.deleteButton}>X</button>
+                            <span>{t.name} - €{t.price} ({t.duration} min)</span>
+                            <button onClick={() => handleDeleteTreatment(t.id)} style={styles.deleteButton}>X</button>
                        </li>
                    ))}
                 </ul>
@@ -1747,13 +1754,13 @@ export default function App() {
                 <ul style={styles.managementList}>
                    {prizes.map((p) => (
                        <li key={p.id} style={styles.managementListItem}>
-                           <span>{p.text}</span>
-                           <div style={styles.limitInputContainer}>
-                               <label>G:</label><input type="number" style={styles.limitInput} value={p.limits.daily} onChange={(e) => handlePrizeLimitChange(p.id, 'daily', e.target.value)} />
-                               <label>S:</label><input type="number" style={styles.limitInput} value={p.limits.weekly} onChange={(e) => handlePrizeLimitChange(p.id, 'weekly', e.target.value)} />
-                               <label>M:</label><input type="number" style={styles.limitInput} value={p.limits.monthly} onChange={(e) => handlePrizeLimitChange(p.id, 'monthly', e.target.value)} />
-                               {!p.text.includes('Ritenta') && <button onClick={() => handleDeletePrize(p.id)} style={styles.deleteButton}>X</button>}
-                           </div>
+                            <span>{p.text}</span>
+                            <div style={styles.limitInputContainer}>
+                                <label>G:</label><input type="number" style={styles.limitInput} value={p.limits.daily} onChange={(e) => handlePrizeLimitChange(p.id, 'daily', e.target.value)} />
+                                <label>S:</label><input type="number" style={styles.limitInput} value={p.limits.weekly} onChange={(e) => handlePrizeLimitChange(p.id, 'weekly', e.target.value)} />
+                                <label>M:</label><input type="number" style={styles.limitInput} value={p.limits.monthly} onChange={(e) => handlePrizeLimitChange(p.id, 'monthly', e.target.value)} />
+                                {!p.text.includes('Ritenta') && <button onClick={() => handleDeletePrize(p.id)} style={styles.deleteButton}>X</button>}
+                            </div>
                        </li>
                    ))}
                 </ul>

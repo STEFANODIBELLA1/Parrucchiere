@@ -1,81 +1,18 @@
 import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
+// Importa i tipi dai nuovi file
+import { type Treatment, type Prize, type Appointment, type ArchivedClosure } from './utils/types';
+// Importa le costanti dai nuovi file
+import { SALON_INFO, INITIAL_TREATMENTS, INITIAL_PRIZES, AVAILABLE_SLOTS, COMMISSION_FEE, SUPER_ADMIN_SEQUENCE } from './utils/constants';
+// Importa le funzioni utility dai nuovi file
+import { getWeekNumber, getTodayString, getMonthString } from './utils/helpers';
+
+
 // FIREBASE START
-// Correzione: importiamo getDoc
-import { db, storage } from './firebaseConfig'; 
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, getDoc } from "firebase/firestore"; // Aggiunto getDoc
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"; // Funzioni per Storage
+import { db, storage } from './firebaseConfig';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 // FIREBASE END
 
-// --- DEFINIZIONE DEI TIPI (per TypeScript) ---
-interface Treatment {
-  id: string;
-  name: string;
-  price: number;
-  duration: number;
-}
-
-interface Prize {
-  id: string;
-  text: string;
-  limits: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-  };
-  dispensed: {
-    daily?: { count: number; date: string };
-    weekly?: { count: number; week: string };
-    monthly?: { count: number; month: string };
-  };
-}
-
-interface Appointment {
-  id: string;
-  clientName: string;
-  date: string;
-  time: string;
-  treatments: Treatment[];
-  total: number;
-  prize: string;
-}
-
-interface ArchivedClosure {
-    id: string;
-    date: string;
-    appointmentCount: number;
-    amountPaid: number;
-    appointments: Appointment[];
-}
-
-
-// --- DATI DI ESEMPIO E CONFIGURAZIONE ---
-const SALON_INFO = {
-  name: "L'Angolo dell'Hair Stylist",
-  address: "Via della Moda, 12, Milano",
-  logoUrl: 'https://placehold.co/150x150/1a1a1a/ffffff?text=Logo',
-};
-
-const INITIAL_TREATMENTS: Treatment[] = [
-  { id: '1', name: 'Taglio Uomo', price: 25, duration: 30 },
-  { id: '2', name: 'Taglio e Piega Donna', price: 50, duration: 60 },
-  { id: '3', name: 'Colore', price: 70, duration: 90 },
-  { id: '4', name: 'Barba', price: 15, duration: 20 },
-  { id: '5', name: 'Trattamento Ristrutturante', price: 35, duration: 45 },
-];
-
-const INITIAL_PRIZES: Prize[] = [
-    { id: 'prize1', text: '10% Sconto sul prossimo trattamento!', limits: { daily: 5, weekly: 20, monthly: 50 }, dispensed: {} },
-    { id: 'prize2', text: 'Trattamento omaggio!', limits: { daily: 1, weekly: 5, monthly: 15 }, dispensed: {} },
-    { id: 'prize3', text: 'Ritenta, sarai più fortunato!', limits: { daily: 999, weekly: 9999, monthly: 99999 }, dispensed: {} }
-];
-
-const AVAILABLE_SLOTS = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
-];
-
-const COMMISSION_FEE = 0.50;
-const SUPER_ADMIN_SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'f', 'c'];
 
 // --- STILI (CSS-in-JS con tipi corretti) ---
 const styles: { [key: string]: CSSProperties } = {
@@ -617,18 +554,8 @@ const styles: { [key: string]: CSSProperties } = {
   }
 };
 
-// --- Funzioni Utilità ---
-const getWeekNumber = (d: Date): string => {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    const weekNo = Math.ceil(( ( (d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
-    return d.getUTCFullYear() + '-' + weekNo;
-};
-const getTodayString = (): string => new Date().toISOString().split('T')[0];
-const getMonthString = (d: Date): string => d.getFullYear() + '-' + (d.getMonth() + 1);
 
-// --- Componenti UI ---
+// --- Componenti UI (Questi verranno spostati in futuro) ---
 
 // AlertDialog Component for custom modals
 const AlertDialog = ({ title, message, onClose }: { title: string; message: string; onClose: () => void }) => (
@@ -731,6 +658,7 @@ const Calendar = ({ selectedDate, onDateSelect }: {selectedDate: string, onDateS
     );
 };
 
+
 // --- Schermata Principale dell'App ---
 export default function App() {
   const [screen, setScreen] = useState('home');
@@ -747,6 +675,8 @@ export default function App() {
   
   // FIREBASE STORAGE START - activePromotionImage verrà caricato da Firestore (il cui URL proviene da Storage)
   const [activePromotionImage, setActivePromotionImage] = useState<string | null>(null);
+  // Nuovo: URL del logo del salone, caricato da Firestore
+  const [salonLogoUrlFromFirestore, setSalonLogoUrlFromFirestore] = useState<string>(SALON_INFO.logoUrl); 
   // FIREBASE STORAGE END
   const [isSplashVisible, setIsSplashVisible] = useState(false);
 
@@ -754,22 +684,21 @@ export default function App() {
   const [selectedSlot, setSelectedSlot] = useState('');
   const [selectedTreatments, setSelectedTreatments] = useState<Treatment[]>([]);
   const [clientName, setClientName] = useState('');
+  // Nuovo: Stato per il numero di telefono del cliente
+  const [clientPhone, setClientPhone] = useState(''); 
   
   const [isAiModalVisible, setAiModalVisible] = useState(false);
   const [aiAnswers, setAiAnswers] = useState({ occasion: '', style: '' });
   const [isGenerating, setIsGenerating] = useState(false);
-  // CORREZIONE 1: Usa useState('') per inizializzare lo stato con una stringa vuota
   const [aiSuggestion, setAiSuggestion] = useState(''); 
 
   const [isTreatmentModalVisible, setTreatmentModalVisible] = useState(false);
   const [selectedTreatmentForModal, setSelectedTreatmentForModal] = useState<Treatment | null>(null);
-  // CORREZIONE 2: Usa useState('') per inizializzare lo stato con una stringa vuota
   const [aiDescription, setAiDescription] = useState('');
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   const [isReminderModalVisible, setReminderModalVisible] = useState(false);
   const [selectedAppointmentForReminder, setSelectedAppointmentForReminder] = useState<Appointment | null>(null);
-  // CORREZIONE 3: Usa useState('') per inizializzare lo stato con una stringa vuota
   const [reminderText, setReminderText] = useState('');
   const [isGeneratingReminder, setIsGeneratingReminder] = useState(false);
 
@@ -791,9 +720,20 @@ export default function App() {
   const [isGeneratingPromo, setIsGeneratingPromo] = useState(false);
 
   const [hairdresserPassword, setHairdresserPassword] = useState('parola'); // Valore di default
-  const [isHairdresserLoginModalVisible, setHairdresserLoginModalVisible] = useState(false);
+  const [isHairdresserLoginModalVisible, setHairdresserLoginModalModalVisible] = useState(false);
   const [hairdresserPasswordInput, setHairdresserPasswordInput] = useState('');
   const [tempHairdresserPassword, setTempHairdresserPassword] = useState(hairdresserPassword);
+
+  // Nuovi stati per le informazioni del salone modificabili
+  const [salonNameFromFirestore, setSalonNameFromFirestore] = useState(SALON_INFO.name);
+  const [salonAddressFromFirestore, setSalonAddressFromFirestore] = useState(SALON_INFO.address);
+  const [salonPhoneFromFirestore, setSalonPhoneFromFirestore] = useState(SALON_INFO.phone);
+  // Stati temporanei per i campi di input nel Super Admin
+  const [tempSalonName, setTempSalonName] = useState(SALON_INFO.name);
+  const [tempSalonAddress, setTempSalonAddress] = useState(SALON_INFO.address);
+  const [tempSalonPhone, setTempSalonPhone] = useState(SALON_INFO.phone);
+  const [tempLogoFile, setTempLogoFile] = useState<File | null>(null);
+
   // FIREBASE END
 
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
@@ -886,7 +826,7 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare i premi.");
     });
 
-    // Carica impostazioni globali (soglia commissione, password parrucchiere, immagine promozionale URL)
+    // Carica impostazioni globali (soglia commissione, password parrucchiere, immagine promozionale URL, info salone)
     const unsubscribeSettings = onSnapshot(doc(db, "settings", "appSettings"), (docSnap) => {
       if (docSnap.exists()) {
         const settingsData = docSnap.data();
@@ -896,12 +836,25 @@ export default function App() {
         setTempHairdresserPassword(settingsData.hairdresserPassword || 'parola');
         // Firebase Storage: Carica l'URL dell'immagine da Firestore
         setActivePromotionImage(settingsData.activePromotionImageUrl || null);
+        // Nuovo: Carica info salone da Firestore
+        setSalonNameFromFirestore(settingsData.salonName || SALON_INFO.name);
+        setTempSalonName(settingsData.salonName || SALON_INFO.name);
+        setSalonAddressFromFirestore(settingsData.salonAddress || SALON_INFO.address);
+        setTempSalonAddress(settingsData.salonAddress || SALON_INFO.address);
+        setSalonPhoneFromFirestore(settingsData.salonPhone || SALON_INFO.phone);
+        setTempSalonPhone(settingsData.salonPhone || SALON_INFO.phone);
+        setSalonLogoUrlFromFirestore(settingsData.salonLogoUrl || SALON_INFO.logoUrl); // Carica l'URL del logo
       } else {
         // Se le impostazioni non esistono, creale con valori di default
         setDoc(doc(db, "settings", "appSettings"), {
           commissionThreshold: 10.00,
           hairdresserPassword: 'parola',
-          activePromotionImageUrl: null // Inizializza l'URL dell'immagine a null
+          activePromotionImageUrl: null,
+          // Nuovo: Inizializza info salone con valori di default
+          salonName: SALON_INFO.name,
+          salonAddress: SALON_INFO.address,
+          salonPhone: SALON_INFO.phone,
+          salonLogoUrl: SALON_INFO.logoUrl, // Inizializza l'URL del logo a default
         });
       }
     }, (error) => {
@@ -970,14 +923,19 @@ export default function App() {
   // FIREBASE START - Funzione handleBooking modificata per Firestore
   const handleBooking = async () => {
     if (!clientName.trim()) {
-        showAlert("Errore di input", "Per favorire, inserisci il tuo nome.");
+        showAlert("Errore di input", "Per favore, inserisci il tuo nome.");
         return;
+    }
+    if (!clientPhone.trim()) { // Nuovo: Validazione del numero di telefono
+      showAlert("Errore di input", "Per favore, inserisci il tuo numero di telefono.");
+      return;
     }
     
     try {
         const newBooking: Appointment = {
             id: '', // L'ID verrà generato da Firestore
             clientName: clientName,
+            clientPhone: clientPhone, // Nuovo: Aggiunto numero di telefono
             date: selectedDate,
             time: selectedSlot,
             treatments: selectedTreatments,
@@ -995,6 +953,7 @@ export default function App() {
         setSelectedSlot('');
         setSelectedTreatments([]);
         setClientName('');
+        setClientPhone(''); // Nuovo: Resetta il campo telefono
         setConfModalVisible(true);
     } catch (error) {
         console.error("Errore durante la prenotazione:", error);
@@ -1106,10 +1065,6 @@ export default function App() {
           if (!ctx) throw new Error("Impossibile ottenere il contesto del canvas");
           canvas.width = 1024;
           canvas.height = 1024;
-          // Ottimizzazione Canvas: willReadFrequently
-          // Questa riga non è necessaria qui, perché si applica al contesto, non al canvas stesso
-          // ctx.canvas.getContext('2d', { willReadFrequently: true });
-
 
           const backgroundImg = new Image();
           const logoImg = new Image();
@@ -1123,7 +1078,7 @@ export default function App() {
 
           await Promise.all([
               loadImage(backgroundImg, backgroundBase64),
-              loadImage(logoImg, SALON_INFO.logoUrl)
+              loadImage(logoImg, salonLogoUrlFromFirestore) // Usa il logo caricato da Firestore
           ]);
           
           ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
@@ -1131,7 +1086,6 @@ export default function App() {
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
           ctx.fillStyle = '#FFFFFF';
-          // CORREZIONE FONT: stringa del font correttamente terminata (era la causa del SyntaxError)
           ctx.font = 'bold 80px "Montserrat", "Helvetica Neue", sans-serif'; 
           ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
           ctx.shadowBlur = 15;
@@ -1213,8 +1167,6 @@ export default function App() {
     if (!activePromotionImage) return; // Se non c'è un'immagine attiva, non fare nulla
     try {
       // Crea un riferimento all'immagine in Firebase Storage usando l'URL completo
-      // Nota: l'URL ottenuto da getDownloadURL include il bucket e il percorso.
-      // Firebase Storage è intelligente nell'usare questo URL per creare il riferimento corretto.
       const imageToDeleteRef = ref(storage, activePromotionImage);
       await deleteObject(imageToDeleteRef); // Elimina l'immagine da Firebase Storage
 
@@ -1228,6 +1180,62 @@ export default function App() {
     }
   }
   // FIREBASE STORAGE END
+
+  // Nuovo: Funzione per salvare le informazioni del salone
+  const handleSaveSalonInfo = async () => {
+    if (!tempSalonName.trim() || !tempSalonAddress.trim() || !tempSalonPhone.trim()) {
+      showAlert("Campi Mancanti", "Compila tutti i campi delle informazioni del salone.");
+      return;
+    }
+    try {
+      await updateDoc(doc(db, "settings", "appSettings"), {
+        salonName: tempSalonName,
+        salonAddress: tempSalonAddress,
+        salonPhone: tempSalonPhone,
+      });
+      setSalonNameFromFirestore(tempSalonName);
+      setSalonAddressFromFirestore(tempSalonAddress);
+      setSalonPhoneFromFirestore(tempSalonPhone);
+      showAlert("Successo", "Informazioni salone aggiornate!");
+    } catch (error: any) {
+      console.error("Errore nel salvataggio info salone:", error);
+      showAlert("Errore", `Impossibile salvare le informazioni del salone: ${error.message || 'Errore sconosciuto'}`);
+    }
+  };
+
+  // Nuovo: Funzione per caricare il logo
+  const handleLogoUpload = async () => {
+    if (!tempLogoFile) {
+      showAlert("File Mancante", "Seleziona un file immagine da caricare.");
+      return;
+    }
+    try {
+      const logoFileName = `salon_logo/logo_${Date.now()}.png`; // Nome file unico
+      const logoRef = ref(storage, logoFileName);
+      await uploadBytes(logoRef, tempLogoFile);
+      const downloadURL = await getDownloadURL(logoRef);
+
+      // Elimina il vecchio logo se esiste un URL diverso dal placeholder di default
+      if (salonLogoUrlFromFirestore && salonLogoUrlFromFirestore !== SALON_INFO.logoUrl) { 
+        try {
+          const oldPath = new URL(salonLogoUrlFromFirestore).pathname.split('/o/')[1].split('?')[0];
+          const decodedOldPath = decodeURIComponent(oldPath);
+          await deleteObject(ref(storage, decodedOldPath));
+        } catch (deleteError) {
+          console.warn("Errore durante l'eliminazione del vecchio logo:", deleteError);
+        }
+      }
+
+      await updateDoc(doc(db, "settings", "appSettings"), { salonLogoUrl: downloadURL });
+      setSalonLogoUrlFromFirestore(downloadURL);
+      setTempLogoFile(null); // Resetta il file selezionato
+      showAlert("Successo", "Logo caricato e aggiornato!");
+    } catch (error: any) {
+      console.error("Errore nel caricamento logo:", error);
+      showAlert("Errore", `Impossibile caricare il logo: ${error.message || 'Errore sconosciuto'}`);
+    }
+  };
+
 
   // FIREBASE START - Funzione handleAccountingClosure modificata per Firestore
   const handleAccountingClosure = async () => {
@@ -1322,7 +1330,7 @@ export default function App() {
 
   const handleHairdresserLogin = () => {
       if (hairdresserPasswordInput === hairdresserPassword) {
-          setHairdresserLoginModalVisible(false);
+          setHairdresserLoginModalModalVisible(false);
           setScreen('admin');
           setHairdresserPasswordInput('');
       } else {
@@ -1427,7 +1435,7 @@ export default function App() {
   }
   // FIREBASE END
 
-  // Funzioni AI (con correzioni per 'payload')
+  // Funzioni AI
     const generateAiSuggestion = async () => {
         if (!aiAnswers.occasion || !aiAnswers.style) {
             showAlert("Campi Mancanti", "Per favore, rispondi a entrambe le domande.");
@@ -1439,9 +1447,7 @@ export default function App() {
         const prompt = `Agisci come un esperto hair stylist. Un cliente cerca un consiglio per un look. L'occasione è "${aiAnswers.occasion}" e il suo stile personale è "${aiAnswers.style}". Fornisci un suggestion dettagliato e creativo per un taglio e colore, spiegando perché si adatta al contesto. Sii incoraggiante e professionale.`;
 
         let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-        // CORREZIONE 4: Definizione di payload
         const payload = { contents: chatHistory }; 
-        // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
         const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0"; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1468,9 +1474,7 @@ export default function App() {
             const prompt = `Scrivi una breve, accattivante e semplice descrizione di marketing per il seguente trattamento per capelli: "${selectedTreatmentForModal.name}". Evidenzia i benefici chiave per il cliente in 2-3 frasi.`;
             
             let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-            // CORREZIONE 5: Definizione di payload
             const payload = { contents: chatHistory };
-            // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
             const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1496,15 +1500,13 @@ export default function App() {
             if (!isReminderModalVisible || !selectedAppointmentForReminder || reminderText) return;
             
             setIsGeneratingReminder(true);
-            const { clientName, date, time } = selectedAppointmentForReminder;
+            const { clientName, date, time, clientPhone } = selectedAppointmentForReminder; // Incluso clientPhone
             const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
             
-            const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time} presso "${SALON_INFO.name}". Aggiungi un tocco di entusiasmo.`;
+            const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time} presso "${salonNameFromFirestore}". Il loro numero di telefono è ${clientPhone}. Aggiungi un tocco di entusiasmo.`; // Usa salonNameFromFirestore e clientPhone
 
             let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-            // CORREZIONE 6: Definizione di payload
             const payload = { contents: chatHistory };
-            // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
             const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1516,13 +1518,13 @@ export default function App() {
                 } else { throw new Error("Risposta non valida dall'AI."); }
             } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
                 console.error("Errore AI:", error);
-                setReminderText(`Ciao ${clientName}! Ti ricordiamo il tuo appuntamento da ${SALON_INFO.name} per il giorno ${formattedDate} alle ore ${time}. A presto!`);
+                setReminderText(`Ciao ${clientName}! Ti ricordiamo il tuo appuntamento da ${salonNameFromFirestore} per il giorno ${formattedDate} alle ore ${time}. A presto!`);
             } finally {
                 setIsGeneratingReminder(false);
             }
         };
         generateReminder();
-    }, [isReminderModalVisible, selectedAppointmentForReminder, reminderText]);
+    }, [isReminderModalVisible, selectedAppointmentForReminder, reminderText, salonNameFromFirestore]); // Dipendenza da salonNameFromFirestore
 
   // --- Funzioni di Rendering ---
   const renderHomeScreen = () => (
@@ -1532,9 +1534,9 @@ export default function App() {
             APP BLOCCATA: Pagamento richiesto nell'Area Riservata.
         </div>
       )}
-      <img src={SALON_INFO.logoUrl} style={styles.logo} alt="Logo del salone" onClick={handleLogoTap} />
-      <h1 style={styles.salonName}>{SALON_INFO.name}</h1>
-      <p style={styles.salonAddress}>{SALON_INFO.address}</p>
+      <img src={salonLogoUrlFromFirestore} style={styles.logo} alt="Logo del salone" onClick={handleLogoTap} />
+      <h1 style={styles.salonName}>{salonNameFromFirestore}</h1>
+      <p style={styles.salonAddress}>{salonAddressFromFirestore} {salonPhoneFromFirestore && ` | Tel: ${salonPhoneFromFirestore}`}</p>
       
       <button style={{...styles.ctaButton, ...(isAppLocked && styles.ctaButtonDisabled)}} onClick={() => !isAppLocked && setScreen('booking')} disabled={isAppLocked}>
         Prenota un Appuntamento
@@ -1544,7 +1546,7 @@ export default function App() {
         ✨ Consulente di Stile Virtuale
       </button>
       
-      <button style={styles.adminButton} onClick={() => setHairdresserLoginModalVisible(true)}>
+      <button style={styles.adminButton} onClick={() => setHairdresserLoginModalModalVisible(true)}>
         Area Riservata
       </button>
     </div>
@@ -1586,15 +1588,17 @@ export default function App() {
 
       {selectedTreatments.length > 0 && selectedSlot && (
           <>
-            <h2 style={styles.sectionTitle}>4. Inserisci il tuo nome</h2>
+            <h2 style={styles.sectionTitle}>4. Inserisci i tuoi dati</h2> {/* Modificato il titolo */}
             <input type="text" style={styles.inputField} placeholder="Il tuo Nome e Cognome" value={clientName} onChange={(e) => setClientName(e.target.value)} />
+            <input type="tel" style={styles.inputField} placeholder="Il tuo Numero di Telefono" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /> {/* Nuovo campo telefono */}
           </>
       )}
       
-      {clientName && selectedTreatments.length > 0 && selectedSlot && selectedDate && (
+      {clientName && clientPhone && selectedTreatments.length > 0 && selectedSlot && selectedDate && (
         <div style={styles.summaryContainer}>
             <h3 style={styles.summaryTitle}>Riepilogo Prenotazione</h3>
             <p style={styles.summaryText}><b>Nome:</b> {clientName}</p>
+            <p style={styles.summaryText}><b>Telefono:</b> {clientPhone}</p> {/* Nuovo: Riepilogo Telefono */}
             <p style={styles.summaryText}><b>Data:</b> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</p>
             <p style={styles.summaryText}><b>Orario:</b> {selectedSlot}</p>
             <p style={styles.summaryText}><b>Trattamenti:</b> {selectedTreatments.map(t => t.name).join(', ')}</p>
@@ -1730,9 +1734,9 @@ export default function App() {
             {archivedClosures.length > 0 ? (
                 archivedClosures.map(closure => (
                     <div key={closure.id} style={styles.appointmentCard}>
-                                    <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
-                                    <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
-                                    <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
+                                        <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
+                                        <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
+                                        <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
                     </div>
                 ))
             ) : <p style={styles.noAppointmentsText}>Nessuna chiusura archiviata.</p>}
@@ -1912,7 +1916,7 @@ export default function App() {
         const prizeWindow = window.open('', '', 'width=400,height=300');
         if (prizeWindow) {
             prizeWindow.document.write(`
-                <html><head><title>Il Tuo Premio - ${SALON_INFO.name}</title>
+                <html><head><title>Il Tuo Premio - ${salonNameFromFirestore}</title>
                 <style>
                     body { font-family: sans-serif; background-color: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
                     .container { text-align: center; border: 3px solid #e6c300; padding: 30px; border-radius: 15px; background-color: #2c2c2c; }
@@ -1960,7 +1964,7 @@ export default function App() {
   );
 
   const renderHairdresserLoginModal = () => (
-      <div style={styles.modalOverlay} onClick={() => setHairdresserLoginModalVisible(false)}>
+      <div style={styles.modalOverlay} onClick={() => setHairdresserLoginModalModalVisible(false)}>
         <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h2 style={styles.modalTitle}>Accesso Area Riservata</h2>
             <input 
@@ -1983,18 +1987,55 @@ export default function App() {
             
             <div style={styles.settingsSection}>
                 <h3 style={styles.subSectionTitle}>Gestione Password Parrucchiere</h3>
-                <input type="text" value={tempHairdresserPassword} onChange={(e) => setTempHairdresserPassword(e.target.value)} style={styles.inputField} />
+                <input type="text" value={tempHairdresserPassword} onChange={(e) => setTempHairdresserPassword(e.target.value)} placeholder="Nuova password" style={styles.inputField} />
                 <button onClick={saveHairdresserPassword} style={styles.smallButton}>Salva Password</button>
             </div>
+
+            {/* Nuovo: Sezione per le Informazioni del Salone */}
+            <div style={styles.settingsSection}>
+                <h3 style={styles.subSectionTitle}>Informazioni Salone</h3>
+                <label style={styles.aiFormLabel}>Nome Salone:</label>
+                <input type="text" value={tempSalonName} onChange={(e) => setTempSalonName(e.target.value)} placeholder="Nome del salone" style={styles.inputField} />
+                <label style={styles.aiFormLabel}>Indirizzo Salone:</label>
+                <input type="text" value={tempSalonAddress} onChange={(e) => setTempSalonAddress(e.target.value)} placeholder="Indirizzo del salone" style={styles.inputField} />
+                <label style={styles.aiFormLabel}>Numero di Telefono:</label>
+                <input type="text" value={tempSalonPhone} onChange={(e) => setTempSalonPhone(e.target.value)} placeholder="Numero di telefono" style={styles.inputField} />
+                <button onClick={handleSaveSalonInfo} style={styles.smallButton}>Salva Info Salone</button>
+
+                <h4 style={{...styles.subSectionTitle, marginTop: '20px'}}>Gestione Logo Salone</h4>
+                {salonLogoUrlFromFirestore && (
+                    <img src={salonLogoUrlFromFirestore} alt="Logo attuale" style={{width: '80px', height: '80px', borderRadius: '50%', display: 'block', margin: '10px auto', border: '1px solid #e6c300'}} />
+                )}
+                <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => setTempLogoFile(e.target.files ? e.target.files[0] : null)} 
+                    style={{...styles.inputField, padding: '10px', height: 'auto'}} 
+                />
+                <button onClick={handleLogoUpload} style={styles.smallButton} disabled={!tempLogoFile}>Carica Nuovo Logo</button>
+                {salonLogoUrlFromFirestore !== SALON_INFO.logoUrl && ( // Permetti di rimuovere solo se non è il logo placeholder
+                  <button onClick={() => {
+                    // Chiedi conferma prima di rimuovere il logo
+                    if (window.confirm("Sei sicuro di voler rimuovere il logo personalizzato?")) {
+                      // Imposta salonLogoUrlFromFirestore a SALON_INFO.logoUrl direttamente senza cancellare da Storage
+                      // L'obiettivo è ripristinare il default, non necessariamente cancellare il file
+                      updateDoc(doc(db, "settings", "appSettings"), { salonLogoUrl: SALON_INFO.logoUrl });
+                      setSalonLogoUrlFromFirestore(SALON_INFO.logoUrl); // Aggiorna lo stato locale
+                      showAlert("Logo Rimosso", "Il logo personalizzato è stato rimosso e ripristinato a quello di default.");
+                    }
+                  }} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Ripristina Logo Default</button>
+                )}
+            </div>
+
 
             <div style={styles.settingsSection}>
                 <h3 style={styles.subSectionTitle}>Gestione Trattamenti</h3>
                 <ul style={styles.managementList}>
                    {treatments.map(t => (
-                       <li key={t.id} style={styles.managementListItem}>
+                        <li key={t.id} style={styles.managementListItem}>
                             <span>{t.name} - €{t.price} ({t.duration} min)</span>
                             <button onClick={() => handleDeleteTreatment(t.id)} style={styles.deleteButton}>X</button>
-                       </li>
+                        </li>
                    ))}
                 </ul>
                 <input type="text" value={newTreatment.name} onChange={(e) => setNewTreatment({...newTreatment, name: e.target.value})} placeholder="Nome trattamento" style={{...styles.inputField, marginBottom: '10px'}} />
@@ -2007,7 +2048,7 @@ export default function App() {
                 <h3 style={styles.subSectionTitle}>Gestione Premi Gratta e Vinci</h3>
                 <ul style={styles.managementList}>
                    {prizes.map((p) => (
-                       <li key={p.id} style={styles.managementListItem}>
+                        <li key={p.id} style={styles.managementListItem}>
                             <span>{p.text}</span>
                             <div style={styles.limitInputContainer}>
                                 <label>G:</label><input type="number" style={styles.limitInput} value={p.limits.daily} onChange={(e) => handlePrizeLimitChange(p.id, 'daily', e.target.value)} />
@@ -2015,7 +2056,7 @@ export default function App() {
                                 <label>M:</label><input type="number" style={styles.limitInput} value={p.limits.monthly} onChange={(e) => handlePrizeLimitChange(p.id, 'monthly', e.target.value)} />
                                 {!p.text.includes('Ritenta') && <button onClick={() => handleDeletePrize(p.id)} style={styles.deleteButton}>X</button>}
                             </div>
-                       </li>
+                        </li>
                    ))}
                 </ul>
                 <input type="text" value={newPrize} onChange={(e) => setNewPrize(e.target.value)} placeholder="Nuovo premio (testo)" style={{...styles.inputField, marginBottom: '10px'}} />

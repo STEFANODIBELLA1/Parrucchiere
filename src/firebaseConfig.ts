@@ -8,7 +8,7 @@ import { getStorage } from "firebase/storage";     // Per Firebase Storage
 
 // La tua configurazione Firebase (questi sono i tuoi placeholder forniti)
 const firebaseConfig = {
-  apiKey: "AIzaSyDwSHWiSMEH55bIC0CayNMlYP6eEjmlIWI",
+  apiKey: "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0",
   authDomain: "salonewebapp.firebaseapp.com",
   projectId: "salonewebapp",
   storageBucket: "salonewebapp.firebasestorage.app",

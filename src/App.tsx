@@ -1,4 +1,10 @@
 import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
+// FIREBASE START
+// Correzione: importiamo getDoc
+import { db, storage } from './firebaseConfig'; 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, getDoc } from "firebase/firestore"; // Aggiunto getDoc
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"; // Funzioni per Storage
+// FIREBASE END
 
 // --- DEFINIZIONE DEI TIPI (per TypeScript) ---
 interface Treatment {
@@ -728,20 +734,21 @@ const Calendar = ({ selectedDate, onDateSelect }: {selectedDate: string, onDateS
 // --- Schermata Principale dell'App ---
 export default function App() {
   const [screen, setScreen] = useState('home');
+  // FIREBASE START - Inizializza con array vuoti, i dati verranno caricati da Firestore
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [archivedClosures, setArchivedClosures] = useState<ArchivedClosure[]>([]);
+  const [treatments, setTreatments] = useState<Treatment[]>([]); // Caricati da Firestore
+  const [prizes, setPrizes] = useState<Prize[]>([]); // Caricati da Firestore
+  // FIREBASE END
+
   const [isConfModalVisible, setConfModalVisible] = useState(false);
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [lastBookingId, setLastBookingId] = useState<string | null>(null);
   
-  const [treatments, setTreatments] = useState<Treatment[]>(INITIAL_TREATMENTS);
-  const [prizes, setPrizes] = useState<Prize[]>(INITIAL_PRIZES);
-  
-  // MODIFICA QUI: Inizializza activePromotionImage da localStorage
-  const [activePromotionImage, setActivePromotionImage] = useState<string | null>(() => {
-    return localStorage.getItem('activePromotionImage');
-  });
-  const [isSplashVisible, setIsSplashVisible] = useState(false); // Inizializza a false, sarà gestito da useEffect
+  // FIREBASE STORAGE START - activePromotionImage verrà caricato da Firestore (il cui URL proviene da Storage)
+  const [activePromotionImage, setActivePromotionImage] = useState<string | null>(null);
+  // FIREBASE STORAGE END
+  const [isSplashVisible, setIsSplashVisible] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -751,15 +758,18 @@ export default function App() {
   const [isAiModalVisible, setAiModalVisible] = useState(false);
   const [aiAnswers, setAiAnswers] = useState({ occasion: '', style: '' });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState('');
+  // CORREZIONE 1: Usa useState('') per inizializzare lo stato con una stringa vuota
+  const [aiSuggestion, setAiSuggestion] = useState(''); 
 
   const [isTreatmentModalVisible, setTreatmentModalVisible] = useState(false);
   const [selectedTreatmentForModal, setSelectedTreatmentForModal] = useState<Treatment | null>(null);
+  // CORREZIONE 2: Usa useState('') per inizializzare lo stato con una stringa vuota
   const [aiDescription, setAiDescription] = useState('');
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
   const [isReminderModalVisible, setReminderModalVisible] = useState(false);
   const [selectedAppointmentForReminder, setSelectedAppointmentForReminder] = useState<Appointment | null>(null);
+  // CORREZIONE 3: Usa useState('') per inizializzare lo stato con una stringa vuota
   const [reminderText, setReminderText] = useState('');
   const [isGeneratingReminder, setIsGeneratingReminder] = useState(false);
 
@@ -768,7 +778,8 @@ export default function App() {
   const [keySequence, setKeySequence] = useState<string[]>([]);
   const [logoTapCount, setLogoTapCount] = useState(0);
 
-  const [commissionThreshold, setCommissionThreshold] = useState(10.00);
+  // FIREBASE START - commissionThreshold e hairdresserPassword verranno gestiti su Firestore
+  const [commissionThreshold, setCommissionThreshold] = useState(10.00); // Valore di default
   const [settingsPassword, setSettingsPassword] = useState('');
   const [areSettingsUnlocked, setAreSettingsUnlocked] = useState(false);
   const [tempThreshold, setTempThreshold] = useState(commissionThreshold.toString());
@@ -776,14 +787,15 @@ export default function App() {
   const [newTreatment, setNewTreatment] = useState({name: '', price: '', duration: ''});
   const [newPrize, setNewPrize] = useState('');
   const [promoDescription, setPromoDescription] = useState('');
-  // New state for promo image subject, updated to include 'couple' and 'scenario'
   const [promoSubject, setPromoSubject] = useState<'woman' | 'man' | 'couple' | 'scenario' | null>(null);
   const [isGeneratingPromo, setIsGeneratingPromo] = useState(false);
 
-  const [hairdresserPassword, setHairdresserPassword] = useState('parola');
+  const [hairdresserPassword, setHairdresserPassword] = useState('parola'); // Valore di default
   const [isHairdresserLoginModalVisible, setHairdresserLoginModalVisible] = useState(false);
   const [hairdresserPasswordInput, setHairdresserPasswordInput] = useState('');
   const [tempHairdresserPassword, setTempHairdresserPassword] = useState(hairdresserPassword);
+  // FIREBASE END
+
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
 
   // State for custom alert dialog
@@ -812,7 +824,101 @@ export default function App() {
     }
   }, [closureRequired]);
 
-  // Splash Screen Logic (nessun cambiamento qui, funziona correttamente con la persistenza)
+  // FIREBASE START - Caricamento iniziale dei dati da Firestore (incluso URL immagine da Storage)
+  useEffect(() => {
+    // Carica appuntamenti
+    const unsubscribeAppointments = onSnapshot(collection(db, "appointments"), (snapshot) => {
+      const fetchedAppointments: Appointment[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Appointment[];
+      setAppointments(fetchedAppointments);
+    }, (error) => {
+      console.error("Errore nel caricamento appuntamenti:", error);
+      showAlert("Errore", "Impossibile caricare gli appuntamenti.");
+    });
+
+    // Carica archivio chiusure
+    const unsubscribeClosures = onSnapshot(collection(db, "archivedClosures"), (snapshot) => {
+      const fetchedClosures: ArchivedClosure[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ArchivedClosure[];
+      setArchivedClosures(fetchedClosures);
+    }, (error) => {
+      console.error("Errore nel caricamento archivio chiusure:", error);
+      showAlert("Errore", "Impossibile caricare l'archivio chiusure.");
+    });
+
+    // Carica trattamenti
+    const unsubscribeTreatments = onSnapshot(collection(db, "treatments"), (snapshot) => {
+      const fetchedTreatments: Treatment[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Treatment[];
+      // Popola con dati iniziali se non ci sono trattamenti
+      if (fetchedTreatments.length === 0) {
+        INITIAL_TREATMENTS.forEach(t => addDoc(collection(db, "treatments"), t));
+        setTreatments(INITIAL_TREATMENTS); // Imposta subito per evitare delay
+      } else {
+        setTreatments(fetchedTreatments);
+      }
+    }, (error) => {
+      console.error("Errore nel caricamento trattamenti:", error);
+      showAlert("Errore", "Impossibile caricare i trattamenti.");
+    });
+
+    // Carica premi
+    const unsubscribePrizes = onSnapshot(collection(db, "prizes"), (snapshot) => {
+      const fetchedPrizes: Prize[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Prize[];
+       // Popola con dati iniziali se non ci sono premi
+      if (fetchedPrizes.length === 0) {
+        INITIAL_PRIZES.forEach(p => addDoc(collection(db, "prizes"), p));
+        setPrizes(INITIAL_PRIZES); // Imposta subito per evitare delay
+      } else {
+        setPrizes(fetchedPrizes);
+      }
+    }, (error) => {
+      console.error("Errore nel caricamento premi:", error);
+      showAlert("Errore", "Impossibile caricare i premi.");
+    });
+
+    // Carica impostazioni globali (soglia commissione, password parrucchiere, immagine promozionale URL)
+    const unsubscribeSettings = onSnapshot(doc(db, "settings", "appSettings"), (docSnap) => {
+      if (docSnap.exists()) {
+        const settingsData = docSnap.data();
+        setCommissionThreshold(settingsData.commissionThreshold || 10.00);
+        setTempThreshold((settingsData.commissionThreshold || 10.00).toString());
+        setHairdresserPassword(settingsData.hairdresserPassword || 'parola');
+        setTempHairdresserPassword(settingsData.hairdresserPassword || 'parola');
+        // Firebase Storage: Carica l'URL dell'immagine da Firestore
+        setActivePromotionImage(settingsData.activePromotionImageUrl || null);
+      } else {
+        // Se le impostazioni non esistono, creale con valori di default
+        setDoc(doc(db, "settings", "appSettings"), {
+          commissionThreshold: 10.00,
+          hairdresserPassword: 'parola',
+          activePromotionImageUrl: null // Inizializza l'URL dell'immagine a null
+        });
+      }
+    }, (error) => {
+      console.error("Errore nel caricamento impostazioni:", error);
+      showAlert("Errore", "Impossibile caricare le impostazioni.");
+    });
+
+    // Cleanup listeners on component unmount
+    return () => {
+      unsubscribeAppointments();
+      unsubscribeClosures();
+      unsubscribeTreatments();
+      unsubscribePrizes();
+      unsubscribeSettings();
+    };
+  }, []); // Esegui solo una volta all'avvio
+
   useEffect(() => {
     if (activePromotionImage) {
       setIsSplashVisible(true);
@@ -824,6 +930,9 @@ export default function App() {
         setIsSplashVisible(false);
     }
   }, [activePromotionImage]);
+
+  // FIREBASE END
+
 
   // Key sequence listener for Super Admin panel
   useEffect(() => {
@@ -858,62 +967,86 @@ export default function App() {
 
   const totalCost = useMemo(() => selectedTreatments.reduce((sum, t) => sum + t.price, 0), [selectedTreatments]);
 
-  const handleBooking = () => {
+  // FIREBASE START - Funzione handleBooking modificata per Firestore
+  const handleBooking = async () => {
     if (!clientName.trim()) {
         showAlert("Errore di input", "Per favorire, inserisci il tuo nome.");
         return;
     }
-    const newBookingId = Math.random().toString(36).substr(2, 9);
-    const newBooking: Appointment = {
-      id: newBookingId,
-      clientName: clientName,
-      date: selectedDate,
-      time: selectedSlot,
-      treatments: selectedTreatments,
-      total: totalCost,
-      prize: '',
-    };
     
-    setLastBookingId(newBookingId);
-    setAppointments(prev => [...prev, newBooking]);
-    
-    setSelectedDate('');
-    setSelectedSlot('');
-    setSelectedTreatments([]);
-    setClientName('');
-    setConfModalVisible(true);
+    try {
+        const newBooking: Appointment = {
+            id: '', // L'ID verrà generato da Firestore
+            clientName: clientName,
+            date: selectedDate,
+            time: selectedSlot,
+            treatments: selectedTreatments,
+            total: totalCost,
+            prize: '',
+        };
+        
+        const docRef = await addDoc(collection(db, "appointments"), newBooking);
+        setLastBookingId(docRef.id); // Firestore genera l'ID
+
+        // Aggiorna lo stato localmente con l'ID generato (onSnapshot lo farà in background, ma questo è più immediato)
+        setAppointments(prev => [...prev, { ...newBooking, id: docRef.id }]);
+        
+        setSelectedDate('');
+        setSelectedSlot('');
+        setSelectedTreatments([]);
+        setClientName('');
+        setConfModalVisible(true);
+    } catch (error) {
+        console.error("Errore durante la prenotazione:", error);
+        showAlert("Errore", "Impossibile completare la prenotazione. Riprova.");
+    }
   };
+  // FIREBASE END
   
   const handleCloseConfirmationModal = () => {
     setConfModalVisible(false);
     setGameModalVisible(true);
   };
 
-  const handleGameEnd = (prizeWon: Prize | null) => {
-    if (lastBookingId && prizeWon) {
-        setAppointments(prevApps => prevApps.map(app =>
-            app.id === lastBookingId ? { ...app, prize: prizeWon.text } : app
-        ));
-        
-        setPrizes(currentPrizes => currentPrizes.map(p => {
-            if (p.id === prizeWon.id) {
-                const today = getTodayString();
-                const week = getWeekNumber(new Date());
-                const month = getMonthString(new Date());
-                const dailyCount = p.dispensed.daily?.date === today ? (p.dispensed.daily.count || 0) : 0;
-                const weeklyCount = p.dispensed.weekly?.week === week ? (p.dispensed.weekly.count || 0) : 0;
-                const monthlyCount = p.dispensed.monthly?.month === month ? (p.dispensed.monthly.count || 0) : 0;
-                return {
-                    ...p,
-                    dispensed: {
-                        daily: { count: dailyCount + 1, date: today },
-                        weekly: { count: weeklyCount + 1, week: week },
-                        monthly: { count: monthlyCount + 1, month: month }
-                    }
+  // FIREBASE START - Funzione handleGameEnd modificata per Firestore
+  const handleGameEnd = async (prizeWon: Prize | null) => {
+    if (lastBookingId) {
+      try {
+        const appointmentRef = doc(db, "appointments", lastBookingId);
+        await updateDoc(appointmentRef, { prize: prizeWon ? prizeWon.text : '' });
+
+        if (prizeWon) {
+          const prizeRef = doc(db, "prizes", prizeWon.id);
+          // PRIMA DI AGGIORNARE, LEGGI IL DOCUMENTO PER ASSICURARTI CHE ESISTA
+          const prizeDocSnap = await getDoc(prizeRef);
+          if (prizeDocSnap.exists()) {
+              const currentPrizeDocData = prizeDocSnap.data() as Prize; // Cast per TypeScript
+              const today = getTodayString();
+              const week = getWeekNumber(new Date());
+              const month = getMonthString(new Date());
+
+              // Calcola i contatori aggiornati basati sui dati attuali nel DB
+              const dailyCount = currentPrizeDocData.dispensed.daily?.date === today ? (currentPrizeDocData.dispensed.daily.count || 0) : 0;
+              const weeklyCount = currentPrizeDocData.dispensed.weekly?.week === week ? (currentPrizeDocData.dispensed.weekly.count || 0) : 0;
+              const monthlyCount = currentPrizeDocData.dispensed.monthly?.month === month ? (currentPrizeDocData.dispensed.monthly.count || 0) : 0;
+
+              await updateDoc(prizeRef, {
+                dispensed: {
+                  daily: { count: dailyCount + 1, date: today },
+                  weekly: { count: weeklyCount + 1, week: week },
+                  monthly: { count: monthlyCount + 1, month: month }
                 }
-            }
-            return p;
-        }));
+              });
+          } else {
+              console.warn(`Tentativo di aggiornare un premio non esistente: ${prizeWon.id}`);
+              // Puoi aggiungere qui una logica per creare il documento se non esiste, se appropriato
+              // Ad esempio: await setDoc(prizeRef, { ...prizeWon, dispensed: { ... } });
+          }
+        }
+      } catch (error: any) { // Tipizza l'errore come 'any' o 'FirebaseError' per accedere a .message
+        console.error("Errore durante l'aggiornamento del premio:", error);
+        showAlert("Errore", `Impossibile salvare i dati del premio: ${error.message || 'Errore sconosciuto'}`);
+      }
     }
     setLastBookingId(null);
     setGameModalVisible(false);
@@ -923,7 +1056,9 @@ export default function App() {
       setScreen('admin');
     }
   }
+  // FIREBASE END
 
+  // FIREBASE STORAGE START - Funzione generatePromoImage per Firebase Storage
   const generatePromoImage = async () => {
       if (!promoDescription.trim()) {
           showAlert("Input Richiesto", "Inserisci una descrizione per la promozione.");
@@ -950,7 +1085,8 @@ export default function App() {
           }
           
           const payload = { instances: [{ prompt: backgroundPrompt }], parameters: { "sampleCount": 1} };
-          const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0"; // Keep this empty as per instructions. Canvas will provide it at runtime.
+          // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
+          const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0"; // La tua chiave API Gemini
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
           
           const response = await fetch(apiUrl, {
@@ -970,10 +1106,14 @@ export default function App() {
           if (!ctx) throw new Error("Impossibile ottenere il contesto del canvas");
           canvas.width = 1024;
           canvas.height = 1024;
+          // Ottimizzazione Canvas: willReadFrequently
+          // Questa riga non è necessaria qui, perché si applica al contesto, non al canvas stesso
+          // ctx.canvas.getContext('2d', { willReadFrequently: true });
+
 
           const backgroundImg = new Image();
           const logoImg = new Image();
-          logoImg.crossOrigin = "Anonymous"; // Required for loading images from different origins onto canvas
+          logoImg.crossOrigin = "Anonymous";
 
           const loadImage = (img: HTMLImageElement, src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
               img.onload = () => resolve(img);
@@ -991,13 +1131,13 @@ export default function App() {
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
           ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 80px "Montserrat", "Helvetica Neue", sans-serif'; // Using Montserrat, common web font
+          // CORREZIONE FONT: stringa del font correttamente terminata (era la causa del SyntaxError)
+          ctx.font = 'bold 80px "Montserrat", "Helvetica Neue", sans-serif'; 
           ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
           ctx.shadowBlur = 15;
           ctx.shadowOffsetX = 3;
           ctx.shadowOffsetY = 3;
 
-          // Function to wrap text to fit within canvas
           const wrapText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
               const words = text.split(' ');
               let line = '';
@@ -1014,61 +1154,120 @@ export default function App() {
               }
               lines.push(line);
               
-              let currentY = y - ((lines.length - 1) * lineHeight); // Adjust start Y for multi-line text to align to bottom
+              let currentY = y - ((lines.length - 1) * lineHeight);
               for (let i = 0; i < lines.length; i++) {
                   ctx.fillText(lines[i].trim(), x, currentY);
                   currentY += lineHeight;
               }
           };
 
-          const textPaddingBottom = 80; // Padding from the bottom for the text
+          const textPaddingBottom = 80;
           wrapText(promoDescription, canvas.width / 2, canvas.height - textPaddingBottom, canvas.width - 150, 95);
           
-          ctx.shadowColor = 'transparent'; // Reset shadow for logo
+          ctx.shadowColor = 'transparent';
 
-          // Draw logo with a white circle background
           const logoPadding = 40;
           const logoSize = 120;
           const logoX = canvas.width - logoSize - logoPadding;
           const logoY = logoPadding;
           
           ctx.beginPath();
-          ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 5, 0, Math.PI * 2); // White background circle
+          ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 5, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
           ctx.fill();
           
           ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
 
-          const finalImage = canvas.toDataURL('image/png');
-          setActivePromotionImage(finalImage);
-          // AGGIUNGI QUI: Salva l'immagine in localStorage
-          localStorage.setItem('activePromotionImage', finalImage);
+          // Ottieni il Blob dall'immagine finale del canvas per caricarlo su Firebase Storage
+          const finalImageBlob = await new Promise<Blob>((resolve, reject) => {
+              canvas.toBlob(blob => {
+                  if (blob) resolve(blob);
+                  else reject(new Error("Impossibile creare il Blob dall'immagine per Firebase Storage."));
+              }, 'image/png');
+          });
+
+          // FIREBASE STORAGE START: Caricamento su Firebase Storage
+          const imageFileName = `promotions/${Date.now()}.png`; // Nome file unico
+          const imageRef = ref(storage, imageFileName); // Crea un riferimento allo storage
+          await uploadBytes(imageRef, finalImageBlob); // Carica il Blob
+          const downloadURL = await getDownloadURL(imageRef); // Ottieni l'URL pubblico
+          // FIREBASE STORAGE END
+
+          setActivePromotionImage(downloadURL);
+          // FIREBASE: Salva l'URL dell'immagine in Firestore (associato alle impostazioni dell'app)
+          await updateDoc(doc(db, "settings", "appSettings"), { activePromotionImageUrl: downloadURL });
+
           showAlert("Successo", "Immagine promozionale creata e impostata come splash screen!");
 
-      } catch (error) {
+      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
           console.error("Errore generazione immagine promo:", error);
-          const errorMessage = error instanceof Error ? error.message : "Errore sconosciuto";
+          const errorMessage = error.message || "Errore sconosciuto";
           showAlert("Errore AI", `Errore durante la creazione dell'immagine promozionale: ${errorMessage}`);
       } finally {
           setIsGeneratingPromo(false);
       }
   };
 
-  const handleAccountingClosure = () => {
+  // FIREBASE STORAGE START: Funzione removePromotionImage per Firebase Storage
+  const removePromotionImage = async () => {
+    if (!activePromotionImage) return; // Se non c'è un'immagine attiva, non fare nulla
+    try {
+      // Crea un riferimento all'immagine in Firebase Storage usando l'URL completo
+      // Nota: l'URL ottenuto da getDownloadURL include il bucket e il percorso.
+      // Firebase Storage è intelligente nell'usare questo URL per creare il riferimento corretto.
+      const imageToDeleteRef = ref(storage, activePromotionImage);
+      await deleteObject(imageToDeleteRef); // Elimina l'immagine da Firebase Storage
+
+      // Rimuovi l'URL dell'immagine dall'impostazione di Firestore
+      await updateDoc(doc(db, "settings", "appSettings"), { activePromotionImageUrl: null });
+      setActivePromotionImage(null); // Aggiorna lo stato locale
+      showAlert("Successo", "Immagine promozionale rimossa!");
+    } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      console.error("Errore durante la rimozione dell'immagine promozionale:", error);
+      showAlert("Errore", `Impossibile rimuovere l'immagine promozionale: ${error.message || 'Errore sconosciuto'}`);
+    }
+  }
+  // FIREBASE STORAGE END
+
+  // FIREBASE START - Funzione handleAccountingClosure modificata per Firestore
+  const handleAccountingClosure = async () => {
     const totalDue = appointments.length * COMMISSION_FEE;
     const newClosure: ArchivedClosure = {
-        id: `closure-${Date.now()}`,
+        id: '', // Firestore genererà l'ID
         date: new Date().toISOString(),
         appointmentCount: appointments.length,
         amountPaid: totalDue,
-        appointments: [...appointments]
+        appointments: [...appointments] // Copia degli appuntamenti correnti
     };
-    setArchivedClosures(prev => [...prev, newClosure]);
-    setAppointments([]);
-    setIsAppLocked(false);
-    setPaymentModalVisible(false);
-    showAlert('Contabilità Chiusa', 'Pagamento registrato e contabilità chiusa con successo! App sbloccata.');
+
+    try {
+        await addDoc(collection(db, "archivedClosures"), newClosure); // Aggiungi la chiusura all'archivio
+        
+        // Elimina tutti gli appuntamenti correnti dalla collezione "appointments"
+        const q = collection(db, "appointments");
+        const querySnapshot = await getDocs(q);
+        const deletePromises = querySnapshot.docs.map(d => deleteDoc(doc(db, "appointments", d.id)));
+        await Promise.all(deletePromises);
+
+        // Resetta i contatori dispensed dei premi
+        const prizeResetPromises = prizes.map(p => {
+          const prizeRef = doc(db, "prizes", p.id);
+          // Imposta dispensed a un oggetto vuoto, resettando i contatori
+          return updateDoc(prizeRef, { dispensed: {} });
+        });
+        await Promise.all(prizeResetPromises);
+
+
+        // La rimozione degli appuntamenti dallo stato locale avverrà automaticamente tramite onSnapshot
+        setIsAppLocked(false);
+        setPaymentModalVisible(false);
+        showAlert('Contabilità Chiusa', 'Pagamento registrato e contabilità chiusa con successo! App sbloccata.');
+    } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore durante la chiusura contabile:", error);
+        showAlert("Errore", `Impossibile chiudere la contabilità: ${error.message || 'Errore sconosciuto'}`);
+    }
   };
+  // FIREBASE END
 
   const unlockSettings = () => {
     if (settingsPassword === 'freecent2025') {
@@ -1079,26 +1278,47 @@ export default function App() {
     }
   };
 
-  const saveSettings = () => {
+  // FIREBASE START - Funzione saveSettings modificata per Firestore
+  const saveSettings = async () => {
     const newThreshold = parseFloat(tempThreshold);
     if (isNaN(newThreshold) || newThreshold <= 0) {
         showAlert("Errore di input", "Inserisci un valore valido per la soglia.");
         return;
     }
-    setCommissionThreshold(newThreshold);
-    setAreSettingsUnlocked(false);
-    showAlert('Impostazioni Salvate', 'Impostazioni salvate!');
+    
+    try {
+        await updateDoc(doc(db, "settings", "appSettings"), {
+            commissionThreshold: newThreshold
+        });
+        setCommissionThreshold(newThreshold);
+        setAreSettingsUnlocked(false);
+        showAlert('Impostazioni Salvate', 'Impostazioni salvate!');
+    } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore nel salvataggio impostazioni:", error);
+        showAlert("Errore", `Impossibile salvare le impostazioni: ${error.message || 'Errore sconosciuto'}`);
+    }
   };
+  // FIREBASE END
 
-  const saveHairdresserPassword = () => {
+  // FIREBASE START - Funzione saveHairdresserPassword modificata per Firestore
+  const saveHairdresserPassword = async () => {
       if(!tempHairdresserPassword.trim()){
           showAlert('Errore', 'La password non può essere vuota.');
           return;
       }
-      setHairdresserPassword(tempHairdresserPassword);
-      setAreSettingsUnlocked(false);
-      showAlert('Password Aggiornata', 'Password parrucchiere aggiornata!');
+      try {
+        await updateDoc(doc(db, "settings", "appSettings"), {
+            hairdresserPassword: tempHairdresserPassword
+        });
+        setHairdresserPassword(tempHairdresserPassword);
+        setAreSettingsUnlocked(false);
+        showAlert('Password Aggiornata', 'Password parrucchiere aggiornata!');
+      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore nel salvataggio password parrucchiere:", error);
+        showAlert("Errore", `Impossibile aggiornare la password: ${error.message || 'Errore sconosciuto'}`);
+      }
   }
+  // FIREBASE END
 
   const handleHairdresserLogin = () => {
       if (hairdresserPasswordInput === hairdresserPassword) {
@@ -1131,40 +1351,83 @@ export default function App() {
     setReminderModalVisible(true);
   };
 
-  // Funzioni Super Admin
-  const handleAddTreatment = () => {
+  // FIREBASE START - Funzioni Super Admin modificate per Firestore
+  const handleAddTreatment = async () => {
       if(!newTreatment.name || !newTreatment.price || !newTreatment.duration) {
           showAlert("Campi Mancanti", "Compila tutti i campi del trattamento.");
           return;
       }
-      const newId = `treatment-${Date.now()}`;
-      setTreatments([...treatments, {id: newId, ...newTreatment, price: parseFloat(newTreatment.price), duration: parseInt(newTreatment.duration)}]);
-      setNewTreatment({name: '', price: '', duration: ''});
+      try {
+        await addDoc(collection(db, "treatments"), {
+          name: newTreatment.name,
+          price: parseFloat(newTreatment.price),
+          duration: parseInt(newTreatment.duration)
+        });
+        setNewTreatment({name: '', price: '', duration: ''});
+        showAlert("Successo", "Trattamento aggiunto!");
+      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore nell'aggiunta trattamento:", error);
+        showAlert("Errore", `Impossibile aggiungere il trattamento: ${error.message || 'Errore sconosciuto'}`);
+      }
   };
-  const handleDeleteTreatment = (id: string) => {
-      setTreatments(treatments.filter(t => t.id !== id));
+
+  const handleDeleteTreatment = async (id: string) => {
+      try {
+        await deleteDoc(doc(db, "treatments", id));
+        showAlert("Successo", "Trattamento eliminato!");
+      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore nell'eliminazione trattamento:", error);
+        showAlert("Errore", `Impossibile eliminare il trattamento: ${error.message || 'Errore sconosciuto'}`);
+      }
   };
-  const handleAddPrize = () => {
+
+  const handleAddPrize = async () => {
       if (!newPrize.trim()) {
           showAlert("Testo Mancante", "Inserisci il testo del premio.");
           return;
       }
-      setPrizes([...prizes, { id: `prize-${Date.now()}`, text: newPrize, limits: { daily: 1, weekly: 1, monthly: 1 }, dispensed: {} }]);
-      setNewPrize('');
+      try {
+        await addDoc(collection(db, "prizes"), {
+          text: newPrize,
+          limits: { daily: 1, weekly: 1, monthly: 1 },
+          dispensed: {}
+        });
+        setNewPrize('');
+        showAlert("Successo", "Premio aggiunto!");
+      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore nell'aggiunta premio:", error);
+        showAlert("Errore", `Impossibile aggiungere il premio: ${error.message || 'Errore sconosciuto'}`);
+      }
   };
-  const handleDeletePrize = (idToDelete: string) => {
-      setPrizes(prizes.filter(p => p.id !== idToDelete));
-  };
-  const handlePrizeLimitChange = (id: string, period: 'daily' | 'weekly' | 'monthly', value: string) => {
-      setPrizes(prizes.map(p => {
-          if (p.id === id) {
-              return { ...p, limits: { ...p.limits, [period]: parseInt(value) || 0 }};
-          }
-          return p;
-      }));
-  }
 
-  // Funzioni AI
+  const handleDeletePrize = async (idToDelete: string) => {
+      try {
+        await deleteDoc(doc(db, "prizes", idToDelete));
+        showAlert("Successo", "Premio eliminato!");
+      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore nell'eliminazione premio:", error);
+        showAlert("Errore", `Impossibile eliminare il premio: ${error.message || 'Errore sconosciuto'}`);
+      }
+  };
+
+  const handlePrizeLimitChange = async (id: string, period: 'daily' | 'weekly' | 'monthly', value: string) => {
+      const parsedValue = parseInt(value) || 0;
+      try {
+        const prizeRef = doc(db, "prizes", id);
+        const currentPrize = prizes.find(p => p.id === id);
+        if (currentPrize) {
+          await updateDoc(prizeRef, {
+            limits: { ...currentPrize.limits, [period]: parsedValue }
+          });
+        }
+      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        console.error("Errore nell'aggiornamento limite premio:", error);
+        showAlert("Errore", `Impossibile aggiornare il limite del premio: ${error.message || 'Errore sconosciuto'}`);
+      }
+  }
+  // FIREBASE END
+
+  // Funzioni AI (con correzioni per 'payload')
     const generateAiSuggestion = async () => {
         if (!aiAnswers.occasion || !aiAnswers.style) {
             showAlert("Campi Mancanti", "Per favore, rispondi a entrambe le domande.");
@@ -1176,8 +1439,10 @@ export default function App() {
         const prompt = `Agisci come un esperto hair stylist. Un cliente cerca un consiglio per un look. L'occasione è "${aiAnswers.occasion}" e il suo stile personale è "${aiAnswers.style}". Fornisci un suggestion dettagliato e creativo per un taglio e colore, spiegando perché si adatta al contesto. Sii incoraggiante e professionale.`;
 
         let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-        const payload = { contents: chatHistory };
-        const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
+        // CORREZIONE 4: Definizione di payload
+        const payload = { contents: chatHistory }; 
+        // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
+        const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0"; 
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         try {
@@ -1186,7 +1451,7 @@ export default function App() {
             if (result.candidates && result.candidates[0].content.parts[0].text) {
                 setAiSuggestion(result.candidates[0].content.parts[0].text);
             } else { throw new Error("Risposta non valida dall'AI."); }
-        } catch (error) {
+        } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
             console.error("Errore AI:", error);
             setAiSuggestion("Siamo spiacenti, si è verificato un errore. Riprova più tardi.");
         } finally {
@@ -1197,13 +1462,15 @@ export default function App() {
     // Effect to generate AI description for treatments when modal opens
     useEffect(() => {
         const generateDescription = async () => {
-            if (!isTreatmentModalVisible || !selectedTreatmentForModal || aiDescription) return; // Only generate if modal is open, a treatment is selected, and description isn't already there
+            if (!isTreatmentModalVisible || !selectedTreatmentForModal || aiDescription) return;
             
             setIsGeneratingDescription(true);
             const prompt = `Scrivi una breve, accattivante e semplice descrizione di marketing per il seguente trattamento per capelli: "${selectedTreatmentForModal.name}". Evidenzia i benefici chiave per il cliente in 2-3 frasi.`;
             
             let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
+            // CORREZIONE 5: Definizione di payload
             const payload = { contents: chatHistory };
+            // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
             const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1213,7 +1480,7 @@ export default function App() {
                 if (result.candidates && result.candidates[0].content.parts[0].text) {
                     setAiDescription(result.candidates[0].content.parts[0].text);
                 } else { throw new Error("Risposta non valida dall'AI."); }
-            } catch (error) {
+            } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
                 console.error("Errore AI:", error);
                 setAiDescription("Non è stato possibile caricare la descrizione.");
             } finally {
@@ -1226,7 +1493,7 @@ export default function App() {
     // Effect to generate AI reminder for appointments when modal opens
     useEffect(() => {
         const generateReminder = async () => {
-            if (!isReminderModalVisible || !selectedAppointmentForReminder || reminderText) return; // Only generate if modal is open, an appointment is selected, and reminder isn't already there
+            if (!isReminderModalVisible || !selectedAppointmentForReminder || reminderText) return;
             
             setIsGeneratingReminder(true);
             const { clientName, date, time } = selectedAppointmentForReminder;
@@ -1235,7 +1502,9 @@ export default function App() {
             const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time} presso "${SALON_INFO.name}". Aggiungi un tocco di entusiasmo.`;
 
             let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
+            // CORREZIONE 6: Definizione di payload
             const payload = { contents: chatHistory };
+            // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
             const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -1245,7 +1514,7 @@ export default function App() {
                 if (result.candidates && result.candidates[0].content.parts[0].text) {
                     setReminderText(result.candidates[0].content.parts[0].text);
                 } else { throw new Error("Risposta non valida dall'AI."); }
-            } catch (error) {
+            } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
                 console.error("Errore AI:", error);
                 setReminderText(`Ciao ${clientName}! Ti ricordiamo il tuo appuntamento da ${SALON_INFO.name} per il giorno ${formattedDate} alle ore ${time}. A presto!`);
             } finally {
@@ -1361,7 +1630,7 @@ export default function App() {
                     style={{
                         ...styles.smallButton,
                         flex: 1,
-                        minWidth: 'calc(50% - 5px)', // Adjusted for two columns, wrap
+                        minWidth: 'calc(50% - 5px)',
                         backgroundColor: promoSubject === 'woman' ? '#e6c300' : '#444',
                         color: promoSubject === 'woman' ? '#1a1a1a' : '#e6c300',
                     }}
@@ -1373,7 +1642,7 @@ export default function App() {
                     style={{
                         ...styles.smallButton,
                         flex: 1,
-                        minWidth: 'calc(50% - 5px)', // Adjusted for two columns, wrap
+                        minWidth: 'calc(50% - 5px)',
                         backgroundColor: promoSubject === 'man' ? '#e6c300' : '#444',
                         color: promoSubject === 'man' ? '#1a1a1a' : '#e6c300',
                     }}
@@ -1385,7 +1654,7 @@ export default function App() {
                     style={{
                         ...styles.smallButton,
                         flex: 1,
-                        minWidth: 'calc(50% - 5px)', // Adjusted for two columns, wrap
+                        minWidth: 'calc(50% - 5px)',
                         backgroundColor: promoSubject === 'couple' ? '#e6c300' : '#444',
                         color: promoSubject === 'couple' ? '#1a1a1a' : '#e6c300',
                     }}
@@ -1397,7 +1666,7 @@ export default function App() {
                     style={{
                         ...styles.smallButton,
                         flex: 1,
-                        minWidth: 'calc(50% - 5px)', // Adjusted for two columns, wrap
+                        minWidth: 'calc(50% - 5px)',
                         backgroundColor: promoSubject === 'scenario' ? '#e6c300' : '#444',
                         color: promoSubject === 'scenario' ? '#1a1a1a' : '#e6c300',
                     }}
@@ -1411,8 +1680,7 @@ export default function App() {
                 <div>
                     <h4 style={styles.subSectionTitle}>Promozione Attiva</h4>
                     <img src={activePromotionImage} alt="Anteprima promozione" style={{width: '100%', borderRadius: '10px', marginTop: '10px'}} />
-                    {/* MODIFICA QUI: Rimuovi l'immagine anche da localStorage */}
-                    <button onClick={() => { setActivePromotionImage(null); localStorage.removeItem('activePromotionImage'); }} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Rimuovi Promozione</button>
+                    <button onClick={removePromotionImage} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Rimuovi Promozione</button>
                 </div>
             )}
         </div>
@@ -1462,9 +1730,9 @@ export default function App() {
             {archivedClosures.length > 0 ? (
                 archivedClosures.map(closure => (
                     <div key={closure.id} style={styles.appointmentCard}>
-                                 <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
-                                 <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
-                                 <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
+                                    <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
+                                    <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
+                                    <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
                     </div>
                 ))
             ) : <p style={styles.noAppointmentsText}>Nessuna chiusura archiviata.</p>}
@@ -1527,7 +1795,6 @@ export default function App() {
         {!isGeneratingReminder && reminderText && (
           <>
             <div style={styles.aiResultBox}>{reminderText}</div>
-            {/* Using document.execCommand('copy') for clipboard operations in iframe environments */}
             <button style={{...styles.ctaButton, marginTop: '15px'}} onClick={() => {
                 const textarea = document.createElement('textarea');
                 textarea.value = reminderText;
@@ -1548,7 +1815,6 @@ export default function App() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [prize, setPrize] = useState<Prize | null>(null);
     const [isRevealed, setIsRevealed] = useState(false);
-    // Use a ref for isDrawing to prevent re-renders from resetting the drawing state
     const isDrawingRef = useRef(false);
 
     useEffect(() => {
@@ -1557,22 +1823,19 @@ export default function App() {
         const month = getMonthString(new Date());
 
         const availablePrizes = prizes.filter(p => {
-            // "Ritenta" prize is always available
             if (p.text.includes('Ritenta')) return true;
 
             const dailyCount = p.dispensed.daily?.date === today ? (p.dispensed.daily.count || 0) : 0;
             const weeklyCount = p.dispensed.weekly?.week === week ? (p.dispensed.weekly.count || 0) : 0;
             const monthlyCount = p.dispensed.monthly?.month === month ? (p.dispensed.monthly.count || 0) : 0;
 
-            // Check if limits for the current period are exceeded
             return dailyCount < p.limits.daily && weeklyCount < p.limits.weekly && monthlyCount < p.limits.monthly;
         });
 
-        const eligible = availablePrizes.filter(p => !p.text.includes('Ritenta')); // Filter out "Ritenta" for initial random selection
+        const eligible = availablePrizes.filter(p => !p.text.includes('Ritenta'));
         if (eligible.length > 0) {
             setPrize(eligible[Math.floor(Math.random() * eligible.length)]);
         } else {
-            // If no eligible prizes, select "Ritenta"
             setPrize(prizes.find(p => p.text.includes('Ritenta')) || null);
         }
     }, [prizes]);
@@ -1583,13 +1846,12 @@ export default function App() {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       
-      // Always re-initialize canvas when prize changes (new game starts)
       canvas.width = 300;
       canvas.height = 150;
       ctx.fillStyle = '#b0b0b0';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      setIsRevealed(false); // Reset revealed state for new game
-      isDrawingRef.current = false; // Ensure ref is reset too
+      setIsRevealed(false);
+      isDrawingRef.current = false;
 
       const getEventPosition = (e: MouseEvent | TouchEvent) => {
         const rect = canvas.getBoundingClientRect();
@@ -1600,43 +1862,39 @@ export default function App() {
       const startDrawing = (e: MouseEvent | TouchEvent) => { e.preventDefault(); isDrawingRef.current = true; draw(e); };
       const stopDrawing = () => { isDrawingRef.current = false; checkRevealed(); };
       const draw = (e: MouseEvent | TouchEvent) => {
-        if (!isDrawingRef.current) return; // Use ref here
+        if (!isDrawingRef.current) return;
         e.preventDefault();
         const { x, y } = getEventPosition(e);
-        ctx.globalCompositeOperation = 'destination-out'; // This makes drawn areas transparent
+        ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.arc(x, y, 20, 0, Math.PI * 2, false); // Draw a transparent circle
+        ctx.arc(x, y, 20, 0, Math.PI * 2, false);
         ctx.fill();
       };
 
       const checkRevealed = () => {
-          // Get image data to check transparency
           const imageData = ctx.getImageData(0,0, canvas.width, canvas.height);
           const data = imageData.data;
           let transparentPixels = 0;
-          // Loop through pixels, checking the alpha channel (every 4th byte)
           for(let i=3; i < data.length; i+=4) {
-              if (data[i] === 0) { // If alpha channel is 0, it's fully transparent
+              if (data[i] === 0) {
                   transparentPixels++;
               }
           }
           const revealedPercentage = (transparentPixels / (canvas.width * canvas.height)) * 100;
-          if (revealedPercentage > 50) { // If more than 50% is transparent, consider it revealed
+          if (revealedPercentage > 50) {
               setIsRevealed(true);
           }
       };
       
-      // Add event listeners for both mouse and touch interactions
       canvas.addEventListener('mousedown', startDrawing);
       canvas.addEventListener('mousemove', draw);
       canvas.addEventListener('mouseup', stopDrawing);
-      canvas.addEventListener('mouseleave', stopDrawing); // Important for mouse
-      canvas.addEventListener('touchstart', startDrawing, { passive: false }); // passive: false to allow preventDefault
+      canvas.addEventListener('mouseleave', stopDrawing);
+      canvas.addEventListener('touchstart', startDrawing, { passive: false });
       canvas.addEventListener('touchmove', draw, { passive: false });
       canvas.addEventListener('touchend', stopDrawing);
-      canvas.addEventListener('touchcancel', stopDrawing); // Handle when touch is interrupted
+      canvas.addEventListener('touchcancel', stopDrawing);
 
-      // Cleanup function for event listeners
       return () => { 
         canvas.removeEventListener('mousedown', startDrawing);
         canvas.removeEventListener('mousemove', draw);
@@ -1647,13 +1905,10 @@ export default function App() {
         canvas.removeEventListener('touchend', stopDrawing);
         canvas.removeEventListener('touchcancel', stopDrawing);
       };
-    }, [prize]); // Dependency: prize. When prize changes, a new game starts, and canvas needs re-init.
-    // The isDrawingRef is not a dependency here as it's a mutable ref and changing it
-    // doesn't mean the effect needs to re-run.
+    }, [prize]);
 
     const handleSavePrize = () => {
         if (!prize) return;
-        // Open a new window to display the prize certificate
         const prizeWindow = window.open('', '', 'width=400,height=300');
         if (prizeWindow) {
             prizeWindow.document.write(`
@@ -1681,7 +1936,6 @@ export default function App() {
           <h2 style={styles.modalTitle}>Il tuo Gratta e Vinci!</h2>
           <p style={styles.modalMessage}>Usa il mouse o il dito per grattare e scoprire se hai vinto un premio!</p>
           <div style={styles.scratchCardContainer}>
-            {/* Display prize text underneath the canvas */}
             <span>{prize ? prize.text : ''}</span>
             <canvas ref={canvasRef} width="300" height="150" style={styles.scratchCanvas} />
           </div>

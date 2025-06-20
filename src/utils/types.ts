@@ -24,6 +24,13 @@ export interface Prize {
   };
 }
 
+// Definizione dell'interfaccia per un Dipendente/Parrucchiere
+export interface Hairdresser {
+  id: string;
+  name: string;
+  // Potremmo aggiungere in futuro: specializzazioni, orari di lavoro, etc.
+}
+
 // Definizione dell'interfaccia per un Appuntamento
 export interface Appointment {
   id: string; // ID univoco dell'appuntamento (generato da Firestore)
@@ -34,6 +41,7 @@ export interface Appointment {
   treatments: Treatment[]; // Array dei trattamenti selezionati
   total: number; // Costo totale dell'appuntamento
   prize: string; // Premio assegnato a questo appuntamento (se presente)
+  hairdresserId: string; // ID del parrucchiere assegnato (NON più null)
 }
 
 // Definizione dell'interfaccia per una Chiusura Contabile Archiviata

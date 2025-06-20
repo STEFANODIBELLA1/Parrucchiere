@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
 // Importa i tipi dai nuovi file
-import { type Treatment, type Prize, type Appointment, type ArchivedClosure } from './utils/types';
+import { type Treatment, type Prize, type Appointment, type ArchivedClosure, type Hairdresser } from './utils/types';
 // Importa le costanti dai nuovi file
-import { SALON_INFO, INITIAL_TREATMENTS, INITIAL_PRIZES, AVAILABLE_SLOTS, COMMISSION_FEE, SUPER_ADMIN_SEQUENCE } from './utils/constants';
+import { SALON_INFO, INITIAL_TREATMENTS, INITIAL_PRIZES, AVAILABLE_SLOTS, COMMISSION_FEE, SUPER_ADMIN_SEQUENCE, INITIAL_HAIRDRESSERS } from './utils/constants';
 // Importa le funzioni utility dai nuovi file
 import { getWeekNumber, getTodayString, getMonthString } from './utils/helpers';
 
@@ -194,7 +194,7 @@ const styles: { [key: string]: CSSProperties } = {
     width: '100%',
     padding: '12px',
     backgroundColor: '#2c2c2c',
-    border: '1px solid #444',
+    border: '1px solid #444', // CORREZIONE QUI
     borderRadius: '8px',
     color: '#fff',
     fontSize: '16px',
@@ -414,6 +414,8 @@ const styles: { [key: string]: CSSProperties } = {
   },
   calendarDayOtherMonth: {
     color: '#555',
+    cursor: 'not-allowed',
+    textDecoration: 'line-through',
   },
   calendarDayPast: {
     color: '#555',
@@ -667,6 +669,7 @@ export default function App() {
   const [archivedClosures, setArchivedClosures] = useState<ArchivedClosure[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]); // Caricati da Firestore
   const [prizes, setPrizes] = useState<Prize[]>([]); // Caricati da Firestore
+  const [hairdressers, setHairdressers] = useState<Hairdresser[]>([]); // Nuovo: Stato per i parrucchieri
   // FIREBASE END
 
   const [isConfModalVisible, setConfModalVisible] = useState(false);
@@ -686,6 +689,7 @@ export default function App() {
   const [clientName, setClientName] = useState('');
   // Nuovo: Stato per il numero di telefono del cliente
   const [clientPhone, setClientPhone] = useState(''); 
+  const [selectedHairdresserId, setSelectedHairdresserId] = useState<string>(''); // Nuovo: ID del parrucchiere selezionato, non più null
   
   const [isAiModalVisible, setAiModalVisible] = useState(false);
   const [aiAnswers, setAiAnswers] = useState({ occasion: '', style: '' });
@@ -715,6 +719,7 @@ export default function App() {
   
   const [newTreatment, setNewTreatment] = useState({name: '', price: '', duration: ''});
   const [newPrize, setNewPrize] = useState('');
+  const [newHairdresserName, setNewHairdresserName] = useState(''); // Nuovo: Stato per aggiungere un parrucchiere
   const [promoDescription, setPromoDescription] = useState('');
   const [promoSubject, setPromoSubject] = useState<'woman' | 'man' | 'couple' | 'scenario' | null>(null);
   const [isGeneratingPromo, setIsGeneratingPromo] = useState(false);
@@ -826,6 +831,23 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare i premi.");
     });
 
+    // Nuovo: Carica parrucchieri
+    const unsubscribeHairdressers = onSnapshot(collection(db, "hairdressers"), (snapshot) => {
+      const fetchedHairdressers: Hairdresser[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Hairdresser[];
+      if (fetchedHairdressers.length === 0) {
+        INITIAL_HAIRDRESSERS.forEach(hd => addDoc(collection(db, "hairdressers"), hd));
+        setHairdressers(INITIAL_HAIRDRESSERS);
+      } else {
+        setHairdressers(fetchedHairdressers);
+      }
+    }, (error) => {
+      console.error("Errore nel caricamento parrucchieri:", error);
+      showAlert("Errore", "Impossibile caricare i parrucchieri.");
+    });
+
     // Carica impostazioni globali (soglia commissione, password parrucchiere, immagine promozionale URL, info salone)
     const unsubscribeSettings = onSnapshot(doc(db, "settings", "appSettings"), (docSnap) => {
       if (docSnap.exists()) {
@@ -868,6 +890,7 @@ export default function App() {
       unsubscribeClosures();
       unsubscribeTreatments();
       unsubscribePrizes();
+      unsubscribeHairdressers(); // Cleanup per i parrucchieri
       unsubscribeSettings();
     };
   }, []); // Esegui solo una volta all'avvio
@@ -930,6 +953,10 @@ export default function App() {
       showAlert("Errore di input", "Per favore, inserisci il tuo numero di telefono.");
       return;
     }
+    if (!selectedHairdresserId) { // Nuovo: Validazione del parrucchiere
+        showAlert("Errore di input", "Per favore, scegli un parrucchiere.");
+        return;
+    }
     
     try {
         const newBooking: Appointment = {
@@ -941,6 +968,7 @@ export default function App() {
             treatments: selectedTreatments,
             total: totalCost,
             prize: '',
+            hairdresserId: selectedHairdresserId, // Nuovo: Aggiunto ID del parrucchiere
         };
         
         const docRef = await addDoc(collection(db, "appointments"), newBooking);
@@ -954,6 +982,7 @@ export default function App() {
         setSelectedTreatments([]);
         setClientName('');
         setClientPhone(''); // Nuovo: Resetta il campo telefono
+        setSelectedHairdresserId(''); // Nuovo: Resetta il parrucchiere selezionato
         setConfModalVisible(true);
     } catch (error) {
         console.error("Errore durante la prenotazione:", error);
@@ -1040,7 +1069,7 @@ export default function App() {
           } else if (promoSubject === 'couple') {
             backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una coppia (un uomo e una donna) con tagli di capelli artistici e d'avanguardia, in pose dinamiche e stravaganti. Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività degli hairstyle. L'illuminazione deve essere drammatica, da studio fotografico, per esaltare i dettagli dei tagli e i colori. Lo sfondo deve essere pulito e minimale per non distrarre dai soggetti principali. L'immagine non deve contenere testo, loghi o brand.";
           } else if (promoSubject === 'scenario') {
-            backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una coppia (un uomo e una donna) con tagli di capelli artistici e d'avanguardia, immersi in un contesto di sfondo casuale, ma elegante e di lusso (es. un loft urbano, un giardino segreto, una galleria d'arte). Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività degli hairstyle in relazione all'ambiente circostante. L'illuminazione deve essere drammatica per esaltare i dettagli dei tagli e i colori. L'immagine non deve contenere testo, loghi o brand.";
+            backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una coppia (un'uomo e una donna) con tagli di capelli artistici e d'avanguardia, immersi in un contesto di sfondo casuale, ma elegante e di lusso (es. un loft urbano, un giardino segreto, una galleria d'arte). Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività degli hairstyle in relazione all'ambiente circostante. L'illuminazione deve essere drammatica per esaltare i dettagli dei tagli e i colori. L'immagine non deve contenere testo, loghi o brand.";
           }
           
           const payload = { instances: [{ prompt: backgroundPrompt }], parameters: { "sampleCount": 1} };
@@ -1433,6 +1462,33 @@ export default function App() {
         showAlert("Errore", `Impossibile aggiornare il limite del premio: ${error.message || 'Errore sconosciuto'}`);
       }
   }
+
+  // Nuovo: Gestione Parrucchieri - Aggiunta
+  const handleAddHairdresser = async () => {
+      if (!newHairdresserName.trim()) {
+          showAlert("Nome Mancante", "Inserisci il nome del parrucchiere.");
+          return;
+      }
+      try {
+          await addDoc(collection(db, "hairdressers"), { name: newHairdresserName });
+          setNewHairdresserName('');
+          showAlert("Successo", "Parrucchiere aggiunto!");
+      } catch (error: any) {
+          console.error("Errore nell'aggiunta parrucchiere:", error);
+          showAlert("Errore", `Impossibile aggiungere il parrucchiere: ${error.message || 'Errore sconosciuto'}`);
+      }
+  };
+
+  // Nuovo: Gestione Parrucchieri - Eliminazione
+  const handleDeleteHairdresser = async (id: string) => {
+      try {
+          await deleteDoc(doc(db, "hairdressers", id));
+          showAlert("Successo", "Parrucchiere eliminato!");
+      } catch (error: any) {
+          console.error("Errore nell'eliminazione parrucchiere:", error);
+          showAlert("Errore", `Impossibile eliminare il parrucchiere: ${error.message || 'Errore sconosciuto'}`);
+      }
+  };
   // FIREBASE END
 
   // Funzioni AI
@@ -1500,10 +1556,13 @@ export default function App() {
             if (!isReminderModalVisible || !selectedAppointmentForReminder || reminderText) return;
             
             setIsGeneratingReminder(true);
-            const { clientName, date, time, clientPhone } = selectedAppointmentForReminder; // Incluso clientPhone
+            const { clientName, date, time, clientPhone, hairdresserId } = selectedAppointmentForReminder; // Incluso clientPhone e hairdresserId
             const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
             
-            const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time} presso "${salonNameFromFirestore}". Il loro numero di telefono è ${clientPhone}. Aggiungi un tocco di entusiasmo.`; // Usa salonNameFromFirestore e clientPhone
+            const hairdresser = hairdressers.find(hd => hd.id === hairdresserId);
+            const hairdresserName = hairdresser ? ` con ${hairdresser.name}` : ''; // Aggiungi il nome del parrucchiere se trovato
+
+            const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time}${hairdresserName} presso "${salonNameFromFirestore}". Il loro numero di telefono è ${clientPhone}. Aggiungi un tocco di entusiasmo.`; // Usa salonNameFromFirestore, clientPhone e hairdresserName
 
             let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
@@ -1518,13 +1577,13 @@ export default function App() {
                 } else { throw new Error("Risposta non valida dall'AI."); }
             } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
                 console.error("Errore AI:", error);
-                setReminderText(`Ciao ${clientName}! Ti ricordiamo il tuo appuntamento da ${salonNameFromFirestore} per il giorno ${formattedDate} alle ore ${time}. A presto!`);
+                setReminderText(`Ciao ${clientName}! Ti ricordiamo il tuo appuntamento da ${salonNameFromFirestore} per il giorno ${formattedDate} alle ore ${time}${hairdresserName}. A presto!`);
             } finally {
                 setIsGeneratingReminder(false);
             }
         };
         generateReminder();
-    }, [isReminderModalVisible, selectedAppointmentForReminder, reminderText, salonNameFromFirestore]); // Dipendenza da salonNameFromFirestore
+    }, [isReminderModalVisible, selectedAppointmentForReminder, reminderText, salonNameFromFirestore, hairdressers]); // Dipendenza da salonNameFromFirestore e hairdressers
 
   // --- Funzioni di Rendering ---
   const renderHomeScreen = () => (
@@ -1564,43 +1623,73 @@ export default function App() {
         onDateSelect={(date: string) => {
             setSelectedDate(date);
             setSelectedSlot(''); // Reset selected slot when date changes
+            setSelectedHairdresserId(''); // Reset selected hairdresser when date changes
         }}
       />
 
       {selectedDate && (
         <>
-          <h2 style={styles.sectionTitle}>2. Scegli l'orario</h2>
+          <h2 style={styles.sectionTitle}>2. Scegli il tuo parrucchiere</h2> {/* Nuovo passaggio */}
+          <div style={styles.slotsContainer}> {/* Riusiamo lo stile slotContainer */}
+            {hairdressers.map(hd => (
+              <button
+                key={hd.id}
+                style={{
+                  ...styles.slotItem,
+                  ...(selectedHairdresserId === hd.id && styles.slotItemSelected)
+                }}
+                onClick={() => {
+                    setSelectedHairdresserId(hd.id);
+                    setSelectedSlot(''); // Resetta lo slot quando cambia il parrucchiere
+                }}
+              >
+                {hd.name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {selectedHairdresserId && selectedDate && ( // Ora dipende dal parrucchiere scelto e dalla data
+        <>
+          <h2 style={styles.sectionTitle}>3. Scegli l'orario</h2> {/* Ora step 3 */}
           <div style={styles.slotsContainer}>
             {AVAILABLE_SLOTS.map(time => {
-              const isBooked = appointments.some(app => app.date === selectedDate && app.time === time);
+              // Verifica se lo slot è già prenotato per la data E il parrucchiere selezionato
+              const isBooked = appointments.some(app => 
+                app.date === selectedDate && 
+                app.time === time && 
+                app.hairdresserId === selectedHairdresserId
+              );
               return <TimeSlot key={time} time={time} onSelect={setSelectedSlot} isSelected={selectedSlot === time} isBooked={isBooked} />
             })}
           </div>
         </>
       )}
 
-      {selectedSlot && (
+      {selectedSlot && selectedHairdresserId && ( // Ora dipende anche dal parrucchiere
         <>
-          <h2 style={styles.sectionTitle}>3. Scegli i trattamenti</h2>
+          <h2 style={styles.sectionTitle}>4. Scegli i trattamenti</h2> {/* Ora step 4 */}
           {treatments.map(item => <TreatmentItem key={item.id} item={item} onSelect={handleSelectTreatment} isSelected={selectedTreatments.some(t => t.id === item.id)} onInfoClick={openTreatmentModal} /> )}
         </>
       )}
 
-      {selectedTreatments.length > 0 && selectedSlot && (
+      {selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && ( // Tutte le dipendenze
           <>
-            <h2 style={styles.sectionTitle}>4. Inserisci i tuoi dati</h2> {/* Modificato il titolo */}
+            <h2 style={styles.sectionTitle}>5. Inserisci i tuoi dati</h2> {/* Ora step 5 */}
             <input type="text" style={styles.inputField} placeholder="Il tuo Nome e Cognome" value={clientName} onChange={(e) => setClientName(e.target.value)} />
-            <input type="tel" style={styles.inputField} placeholder="Il tuo Numero di Telefono" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /> {/* Nuovo campo telefono */}
+            <input type="tel" style={styles.inputField} placeholder="Il tuo Numero di Telefono" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
           </>
       )}
       
-      {clientName && clientPhone && selectedTreatments.length > 0 && selectedSlot && selectedDate && (
+      {clientName && clientPhone && selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && ( // Tutte le dipendenze
         <div style={styles.summaryContainer}>
             <h3 style={styles.summaryTitle}>Riepilogo Prenotazione</h3>
             <p style={styles.summaryText}><b>Nome:</b> {clientName}</p>
-            <p style={styles.summaryText}><b>Telefono:</b> {clientPhone}</p> {/* Nuovo: Riepilogo Telefono */}
+            <p style={styles.summaryText}><b>Telefono:</b> {clientPhone}</p>
             <p style={styles.summaryText}><b>Data:</b> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</p>
             <p style={styles.summaryText}><b>Orario:</b> {selectedSlot}</p>
+            <p style={styles.summaryText}><b>Parrucchiere:</b> {hairdressers.find(hd => hd.id === selectedHairdresserId)?.name || 'N/A'}</p>
             <p style={styles.summaryText}><b>Trattamenti:</b> {selectedTreatments.map(t => t.name).join(', ')}</p>
             <p style={styles.summaryTotal}>Totale: €{totalCost}</p>
             <button style={styles.ctaButton} onClick={handleBooking}>
@@ -1717,16 +1806,22 @@ export default function App() {
         <h2 style={styles.sectionTitle}>Dettaglio Appuntamenti Correnti</h2>
         {appointments.length > 0 ? (
             // Sort appointments by date for better readability
-            [...appointments].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((app) => (
-                <div key={app.id} style={styles.appointmentCard}>
-                  <p style={styles.appointmentClient}>{app.clientName}</p>
-                  <p style={styles.appointmentDate}>{new Date(app.date + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})} alle {app.time}</p>
-                  {app.prize && !app.prize.includes('Ritenta') && (
-                    <p style={styles.appointmentPrize}>🏆 Premio Vinto: {app.prize}</p>
-                  )}
-                  <button style={styles.smallButton} onClick={() => openReminderModal(app)}>✨ Genera Promemoria</button>
-                </div>
-            ))
+            [...appointments].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((app) => {
+                const assignedHairdresser = hairdressers.find(hd => hd.id === app.hairdresserId); // Trova il parrucchiere assegnato
+                return (
+                    <div key={app.id} style={styles.appointmentCard}>
+                      <p style={styles.appointmentClient}>{app.clientName}</p>
+                      <p style={styles.appointmentDate}>{new Date(app.date + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})} alle {app.time}</p>
+                      {assignedHairdresser && ( // Nuovo: Mostra parrucchiere assegnato
+                        <p style={styles.appointmentServices}>Parrucchiere: {assignedHairdresser.name}</p>
+                      )}
+                      {app.prize && !app.prize.includes('Ritenta') && (
+                        <p style={styles.appointmentPrize}>🏆 Premio Vinto: {app.prize}</p>
+                      )}
+                      <button style={styles.smallButton} onClick={() => openReminderModal(app)}>✨ Genera Promemoria</button>
+                    </div>
+                );
+            })
         ) : <p style={styles.noAppointmentsText}>Nessun appuntamento in attesa di pagamento.</p> }
 
         <div style={styles.archiveSection}>
@@ -2042,6 +2137,20 @@ export default function App() {
                 <input type="number" value={newTreatment.price} onChange={(e) => setNewTreatment({...newTreatment, price: e.target.value})} placeholder="Prezzo" style={{...styles.inputField, marginBottom: '10px'}} />
                 <input type="number" value={newTreatment.duration} onChange={(e) => setNewTreatment({...newTreatment, duration: e.target.value})} placeholder="Durata (min)" style={{...styles.inputField, marginBottom: '10px'}} />
                 <button onClick={handleAddTreatment} style={styles.smallButton}>Aggiungi Trattamento</button>
+            </div>
+
+            <div style={styles.settingsSection}>
+                <h3 style={styles.subSectionTitle}>Gestione Parrucchieri</h3> {/* Nuovo: Sezione per la gestione dei parrucchieri */}
+                <ul style={styles.managementList}>
+                   {hairdressers.map(hd => (
+                        <li key={hd.id} style={styles.managementListItem}>
+                            <span>{hd.name}</span>
+                            <button onClick={() => handleDeleteHairdresser(hd.id)} style={styles.deleteButton}>X</button>
+                        </li>
+                   ))}
+                </ul>
+                <input type="text" value={newHairdresserName} onChange={(e) => setNewHairdresserName(e.target.value)} placeholder="Nome nuovo parrucchiere" style={{...styles.inputField, marginBottom: '10px'}} />
+                <button onClick={handleAddHairdresser} style={styles.smallButton}>Aggiungi Parrucchiere</button>
             </div>
 
             <div style={styles.settingsSection}>

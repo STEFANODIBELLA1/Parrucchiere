@@ -24,6 +24,13 @@ export const INITIAL_PRIZES = [
     { id: 'prize3', text: 'Ritenta, sarai più fortunato!', limits: { daily: 999, weekly: 9999, monthly: 99999 }, dispensed: {} } // Premio "Non vinto" con limiti alti
 ];
 
+// Parrucchieri iniziali di default (usati per popolare Firestore se vuoto)
+export const INITIAL_HAIRDRESSERS = [
+  { id: 'hd1', name: 'Mario Rossi' },
+  { id: 'hd2', name: 'Giulia Bianchi' },
+  { id: 'hd3', name: 'Luca Verdi' },
+];
+
 // Fasce orarie disponibili per le prenotazioni
 export const AVAILABLE_SLOTS = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',

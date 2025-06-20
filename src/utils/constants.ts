@@ -26,19 +26,54 @@ export const INITIAL_PRIZES = [
 
 // Parrucchieri iniziali di default (usati per popolare Firestore se vuoto)
 export const INITIAL_HAIRDRESSERS = [
-  { id: 'hd1', name: 'Mario Rossi' },
-  { id: 'hd2', name: 'Giulia Bianchi' },
-  { id: 'hd3', name: 'Luca Verdi' },
+  { id: 'hd1', name: 'Mario Rossi', workingHours: { //
+    monday: { start: '09:00', end: '18:00' },
+    tuesday: { start: '09:00', end: '18:00' },
+    wednesday: null, // Riposo
+    thursday: { start: '09:00', end: '18:00' },
+    friday: { start: '09:00', end: '18:00' },
+    saturday: { start: '09:00', end: '13:00' },
+    sunday: null,
+  }, absentDates: [] },
+  { id: 'hd2', name: 'Giulia Bianchi', workingHours: { //
+    monday: { start: '09:00', end: '13:00' },
+    tuesday: { start: '09:00', end: '18:00' },
+    wednesday: { start: '14:30', end: '18:00' },
+    thursday: { start: '09:00', end: '18:00' },
+    friday: { start: '09:00', end: '18:00' },
+    saturday: null, // Riposo
+    sunday: null,
+  }, absentDates: [] },
+  { id: 'hd3', name: 'Luca Verdi', workingHours: { //
+    monday: { start: '14:00', end: '18:00' },
+    tuesday: null, // Riposo
+    wednesday: { start: '09:00', end: '18:00' },
+    thursday: { start: '09:00', end: '18:00' },
+    friday: { start: '09:00', end: '18:00' },
+    saturday: { start: '09:00', end: '13:00' },
+    sunday: null,
+  }, absentDates: [] },
 ];
 
-// Fasce orarie disponibili per le prenotazioni
-export const AVAILABLE_SLOTS = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
-];
+// Fasce orarie disponibili per le prenotazioni (ora dinamiche in App.tsx)
+export const AVAILABLE_SLOTS: string[] = []; // Lasciamo vuoto, sarà calcolato dinamicamente
 
 // Percentuale di commissione per appuntamento (se applicabile)
-export const COMMISSION_FEE = 0.50;
+export const COMMISSION_FEE = 0.50; // Valore di default, ora modificabile da Super Admin
+
+// Tariffa per la generazione di immagini promozionali (lato Super Admin)
+export const PROMOTION_GENERATION_FEE = 2.00; // Esempio: 2 euro per immagine generata
 
 // Sequenza di tasti per accedere al pannello Super Admin (es. freccia su, freccia su, freccia giù, freccia giù, f, c)
 export const SUPER_ADMIN_SEQUENCE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'f', 'c'];
+
+// Costanti per il programma fedeltà
+export const LOYALTY_SETTINGS = {
+  pointsPerEuro: 1, // 1 punto per ogni euro speso
+  pointsPerAppointment: 10, // Punti fissi per appuntamento (alternativa o aggiunta a pointsPerEuro)
+  thresholds: [ // Soglie e sconti associati
+    { points: 100, discount: 10, description: '10€ di sconto' },
+    { points: 200, discount: 25, description: '25€ di sconto' },
+    { points: 300, discount: 50, description: 'Trattamento omaggio fino a 50€' },
+  ]
+};

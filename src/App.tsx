@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
 // Importa i tipi dai nuovi file
-import { type Treatment, type Prize, type Appointment, type ArchivedClosure, type Hairdresser } from './utils/types';
+import { type Treatment, type Prize, type Appointment, type ArchivedClosure, type Hairdresser, type ClientProfile } from './utils/types';
 // Importa le costanti dai nuovi file
-import { SALON_INFO, INITIAL_TREATMENTS, INITIAL_PRIZES, AVAILABLE_SLOTS, COMMISSION_FEE, SUPER_ADMIN_SEQUENCE, INITIAL_HAIRDRESSERS } from './utils/constants';
+import { SALON_INFO, INITIAL_TREATMENTS, INITIAL_PRIZES, COMMISSION_FEE, SUPER_ADMIN_SEQUENCE, INITIAL_HAIRDRESSERS, PROMOTION_GENERATION_FEE, LOYALTY_SETTINGS } from './utils/constants';
 // Importa le funzioni utility dai nuovi file
 import { getWeekNumber, getTodayString, getMonthString } from './utils/helpers';
 
@@ -194,7 +194,7 @@ const styles: { [key: string]: CSSProperties } = {
     width: '100%',
     padding: '12px',
     backgroundColor: '#2c2c2c',
-    border: '1px solid #444', // CORREZIONE QUI
+    border: '1px solid #444',
     borderRadius: '8px',
     color: '#fff',
     fontSize: '16px',
@@ -610,7 +610,7 @@ const Calendar = ({ selectedDate, onDateSelect }: {selectedDate: string, onDateS
     const renderDays = () => {
         const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
         const startDate = new Date(monthStart);
-        startDate.setDate(startDate.getDate() - (monthStart.getDay() === 0 ? 6 : monthStart.getDay() - 1)); // Adjust for Monday start
+        startDate.setDate(startDate.getDate() - (monthStart.getDay() === 0 ? 6 : monthStart.getDay() - 1));
         
         const days = [];
         const today = new Date();
@@ -667,9 +667,10 @@ export default function App() {
   // FIREBASE START - Inizializza con array vuoti, i dati verranno caricati da Firestore
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [archivedClosures, setArchivedClosures] = useState<ArchivedClosure[]>([]);
-  const [treatments, setTreatments] = useState<Treatment[]>([]); // Caricati da Firestore
-  const [prizes, setPrizes] = useState<Prize[]>([]); // Caricati da Firestore
-  const [hairdressers, setHairdressers] = useState<Hairdresser[]>([]); // Nuovo: Stato per i parrucchieri
+  const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [hairdressers, setHairdressers] = useState<Hairdresser[]>([]);
+  const [clientProfiles, setClientProfiles] = useState<ClientProfile[]>([]);
   // FIREBASE END
 
   const [isConfModalVisible, setConfModalVisible] = useState(false);
@@ -679,7 +680,7 @@ export default function App() {
   // FIREBASE STORAGE START - activePromotionImage verrà caricato da Firestore (il cui URL proviene da Storage)
   const [activePromotionImage, setActivePromotionImage] = useState<string | null>(null);
   // Nuovo: URL del logo del salone, caricato da Firestore
-  const [salonLogoUrlFromFirestore, setSalonLogoUrlFromFirestore] = useState<string>(SALON_INFO.logoUrl); 
+  const [salonLogoUrlFromFirestore, setSalonLogoUrlFromFirestore] = useState<string>(SALON_INFO.logoUrl);
   // FIREBASE STORAGE END
   const [isSplashVisible, setIsSplashVisible] = useState(false);
 
@@ -688,13 +689,13 @@ export default function App() {
   const [selectedTreatments, setSelectedTreatments] = useState<Treatment[]>([]);
   const [clientName, setClientName] = useState('');
   // Nuovo: Stato per il numero di telefono del cliente
-  const [clientPhone, setClientPhone] = useState(''); 
-  const [selectedHairdresserId, setSelectedHairdresserId] = useState<string>(''); // Nuovo: ID del parrucchiere selezionato, non più null
+  const [clientPhone, setClientPhone] = useState('');
+  const [selectedHairdresserId, setSelectedHairdresserId] = useState<string>('');
   
   const [isAiModalVisible, setAiModalVisible] = useState(false);
   const [aiAnswers, setAiAnswers] = useState({ occasion: '', style: '' });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState(''); 
+  const [aiSuggestion, setAiSuggestion] = useState('');
 
   const [isTreatmentModalVisible, setTreatmentModalVisible] = useState(false);
   const [selectedTreatmentForModal, setSelectedTreatmentForModal] = useState<Treatment | null>(null);
@@ -712,19 +713,33 @@ export default function App() {
   const [logoTapCount, setLogoTapCount] = useState(0);
 
   // FIREBASE START - commissionThreshold e hairdresserPassword verranno gestiti su Firestore
-  const [commissionThreshold, setCommissionThreshold] = useState(10.00); // Valore di default
+  const [commissionThreshold, setCommissionThreshold] = useState(10.00);
   const [settingsPassword, setSettingsPassword] = useState('');
   const [areSettingsUnlocked, setAreSettingsUnlocked] = useState(false);
   const [tempThreshold, setTempThreshold] = useState(commissionThreshold.toString());
+
+  const [commissionFee, setCommissionFee] = useState(COMMISSION_FEE);
+  const [tempCommissionFee, setTempCommissionFee] = useState(COMMISSION_FEE.toString());
+
+  const [promotionGenerationFee, setPromotionGenerationFee] = useState(PROMOTION_GENERATION_FEE);
+  const [tempPromotionGenerationFee, setTempPromotionGenerationFee] = useState(PROMOTION_GENERATION_FEE.toString());
+  const [promotionsGeneratedCount, setPromotionsGeneratedCount] = useState(0);
+
+  const [autoPaymentThreshold, setAutoPaymentThreshold] = useState(50.00);
+  const [tempAutoPaymentThreshold, setTempAutoPaymentThreshold] = useState("50.00");
   
   const [newTreatment, setNewTreatment] = useState({name: '', price: '', duration: ''});
   const [newPrize, setNewPrize] = useState('');
-  const [newHairdresserName, setNewHairdresserName] = useState(''); // Nuovo: Stato per aggiungere un parrucchiere
+  const [newHairdresserName, setNewHairdresserName] = useState('');
+  const [editingHairdresser, setEditingHairdresser] = useState<Hairdresser | null>(null);
+  const [tempHairdresserWorkingHours, setTempHairdresserWorkingHours] = useState<{[key: string]: { start: string; end: string } | null}>({});
+  const [tempHairdresserAbsentDates, setTempHairdresserAbsentDates] = useState<string[]>([]);
+
   const [promoDescription, setPromoDescription] = useState('');
   const [promoSubject, setPromoSubject] = useState<'woman' | 'man' | 'couple' | 'scenario' | null>(null);
   const [isGeneratingPromo, setIsGeneratingPromo] = useState(false);
 
-  const [hairdresserPassword, setHairdresserPassword] = useState('parola'); // Valore di default
+  const [hairdresserPassword, setHairdresserPassword] = useState('parola');
   const [isHairdresserLoginModalVisible, setHairdresserLoginModalModalVisible] = useState(false);
   const [hairdresserPasswordInput, setHairdresserPasswordInput] = useState('');
   const [tempHairdresserPassword, setTempHairdresserPassword] = useState(hairdresserPassword);
@@ -738,6 +753,9 @@ export default function App() {
   const [tempSalonAddress, setTempSalonAddress] = useState(SALON_INFO.address);
   const [tempSalonPhone, setTempSalonPhone] = useState(SALON_INFO.phone);
   const [tempLogoFile, setTempLogoFile] = useState<File | null>(null);
+
+  const [isPaymentSetupModalVisible, setIsPaymentSetupModalVisible] = useState(false);
+  const [selectedHairdresserForPayment, setSelectedHairdresserForPayment] = useState<Hairdresser | null>(null);
 
   // FIREBASE END
 
@@ -760,8 +778,10 @@ export default function App() {
 
 
   const closureRequired = useMemo(() => {
-    return appointments.length * COMMISSION_FEE >= commissionThreshold;
-  }, [appointments, commissionThreshold]);
+    const totalAppointmentsDue = appointments.length * commissionFee;
+    const totalPromotionsDue = promotionsGeneratedCount * promotionGenerationFee;
+    return (totalAppointmentsDue + totalPromotionsDue) >= commissionThreshold;
+  }, [appointments, commissionThreshold, promotionsGeneratedCount, promotionGenerationFee, commissionFee]);
   
   useEffect(() => {
     if(closureRequired) {
@@ -834,8 +854,13 @@ export default function App() {
     // Nuovo: Carica parrucchieri
     const unsubscribeHairdressers = onSnapshot(collection(db, "hairdressers"), (snapshot) => {
       const fetchedHairdressers: Hairdresser[] = snapshot.docs.map(doc => ({
+        // Assicurati che i dati del documento vengano prima, poi i valori di default
+        ...doc.data(),
         id: doc.id,
-        ...doc.data()
+        // Fornisci valori di default per le nuove proprietà se mancanti nel DB esistente
+        workingHours: doc.data().workingHours || { monday: { start: '09:00', end: '18:00' }, tuesday: { start: '09:00', end: '18:00' }, wednesday: { start: '09:00', end: '18:00' }, thursday: { start: '09:00', end: '18:00' }, friday: { start: '09:00', end: '18:00' }, saturday: { start: '09:00', end: '13:00' }, sunday: null },
+        absentDates: doc.data().absentDates || [],
+        stripeCustomerId: doc.data().stripeCustomerId || undefined,
       })) as Hairdresser[];
       if (fetchedHairdressers.length === 0) {
         INITIAL_HAIRDRESSERS.forEach(hd => addDoc(collection(db, "hairdressers"), hd));
@@ -847,6 +872,19 @@ export default function App() {
       console.error("Errore nel caricamento parrucchieri:", error);
       showAlert("Errore", "Impossibile caricare i parrucchieri.");
     });
+
+    // Nuovo: Carica profili cliente
+    const unsubscribeClientProfiles = onSnapshot(collection(db, "clientProfiles"), (snapshot) => {
+      const fetchedProfiles: ClientProfile[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ClientProfile[];
+      setClientProfiles(fetchedProfiles);
+    }, (error) => {
+      console.error("Errore nel caricamento profili cliente:", error);
+      showAlert("Errore", "Impossibile caricare i profili cliente.");
+    });
+
 
     // Carica impostazioni globali (soglia commissione, password parrucchiere, immagine promozionale URL, info salone)
     const unsubscribeSettings = onSnapshot(doc(db, "settings", "appSettings"), (docSnap) => {
@@ -865,7 +903,15 @@ export default function App() {
         setTempSalonAddress(settingsData.salonAddress || SALON_INFO.address);
         setSalonPhoneFromFirestore(settingsData.salonPhone || SALON_INFO.phone);
         setTempSalonPhone(settingsData.salonPhone || SALON_INFO.phone);
-        setSalonLogoUrlFromFirestore(settingsData.salonLogoUrl || SALON_INFO.logoUrl); // Carica l'URL del logo
+        setSalonLogoUrlFromFirestore(settingsData.salonLogoUrl || SALON_INFO.logoUrl);
+        setPromotionGenerationFee(settingsData.promotionGenerationFee || PROMOTION_GENERATION_FEE);
+        setTempPromotionGenerationFee((settingsData.promotionGenerationFee || PROMOTION_GENERATION_FEE).toString());
+        setPromotionsGeneratedCount(settingsData.promotionsGeneratedCount || 0);
+        setCommissionFee(settingsData.commissionFee || COMMISSION_FEE);
+        setTempCommissionFee((settingsData.commissionFee || COMMISSION_FEE).toString());
+        setAutoPaymentThreshold(settingsData.autoPaymentThreshold || 50.00);
+        setTempAutoPaymentThreshold((settingsData.autoPaymentThreshold || 50.00).toString());
+
       } else {
         // Se le impostazioni non esistono, creale con valori di default
         setDoc(doc(db, "settings", "appSettings"), {
@@ -876,7 +922,11 @@ export default function App() {
           salonName: SALON_INFO.name,
           salonAddress: SALON_INFO.address,
           salonPhone: SALON_INFO.phone,
-          salonLogoUrl: SALON_INFO.logoUrl, // Inizializza l'URL del logo a default
+          salonLogoUrl: SALON_INFO.logoUrl,
+          promotionGenerationFee: PROMOTION_GENERATION_FEE,
+          promotionsGeneratedCount: 0,
+          commissionFee: COMMISSION_FEE,
+          autoPaymentThreshold: 50.00,
         });
       }
     }, (error) => {
@@ -890,10 +940,11 @@ export default function App() {
       unsubscribeClosures();
       unsubscribeTreatments();
       unsubscribePrizes();
-      unsubscribeHairdressers(); // Cleanup per i parrucchieri
+      unsubscribeHairdressers();
+      unsubscribeClientProfiles();
       unsubscribeSettings();
     };
-  }, []); // Esegui solo una volta all'avvio
+  }, []);
 
   useEffect(() => {
     if (activePromotionImage) {
@@ -906,8 +957,6 @@ export default function App() {
         setIsSplashVisible(false);
     }
   }, [activePromotionImage]);
-
-  // FIREBASE END
 
 
   // Key sequence listener for Super Admin panel
@@ -943,46 +992,112 @@ export default function App() {
 
   const totalCost = useMemo(() => selectedTreatments.reduce((sum, t) => sum + t.price, 0), [selectedTreatments]);
 
+  // Nuovo: Funzione per ottenere gli slot disponibili per un parrucchiere in una data specifica
+  const getHairdresserAvailableSlots = (dateString: string, hdId: string): string[] => {
+    const selectedDay = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = selectedDay.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+
+    const hairdresser = hairdressers.find(hd => hd.id === hdId);
+    if (!hairdresser) return [];
+
+    // Controlla se il parrucchiere è assente in quella data
+    if (hairdresser.absentDates.includes(dateString)) {
+      return [];
+    }
+
+    const dailyHours = hairdresser.workingHours[dayOfWeek];
+
+    if (!dailyHours) { // Giorno di riposo
+      return [];
+    }
+
+    const [startHour, startMinute] = dailyHours.start.split(':').map(Number);
+    const [endHour, endMinute] = dailyHours.end.split(':').map(Number);
+
+    const slots: string[] = [];
+    const currentTime = new Date(selectedDay);
+    currentTime.setHours(startHour, startMinute, 0, 0);
+
+    const endTime = new Date(selectedDay);
+    endTime.setHours(endHour, endMinute, 0, 0);
+
+    while (currentTime.getTime() < endTime.getTime()) {
+      const slot = currentTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      slots.push(slot);
+      currentTime.setMinutes(currentTime.getMinutes() + 30);
+    }
+
+    // Filtra gli slot già prenotati per quella data e quel parrucchiere
+    return slots.filter(slot => !appointments.some(app =>
+      app.date === dateString && 
+      app.time === slot && 
+      app.hairdresserId === hdId
+    ));
+  };
+
+
   // FIREBASE START - Funzione handleBooking modificata per Firestore
   const handleBooking = async () => {
     if (!clientName.trim()) {
         showAlert("Errore di input", "Per favore, inserisci il tuo nome.");
         return;
     }
-    if (!clientPhone.trim()) { // Nuovo: Validazione del numero di telefono
-      showAlert("Errore di input", "Per favore, inserisci il tuo numero di telefono.");
-      return;
+    if (!clientPhone.trim()) {
+        showAlert("Errore di input", "Per favor, inserisci il tuo numero di telefono.");
+        return;
     }
-    if (!selectedHairdresserId) { // Nuovo: Validazione del parrucchiere
+    if (!selectedHairdresserId) {
         showAlert("Errore di input", "Per favore, scegli un parrucchiere.");
         return;
     }
     
     try {
         const newBooking: Appointment = {
-            id: '', // L'ID verrà generato da Firestore
+            id: '',
             clientName: clientName,
-            clientPhone: clientPhone, // Nuovo: Aggiunto numero di telefono
+            clientPhone: clientPhone,
             date: selectedDate,
             time: selectedSlot,
             treatments: selectedTreatments,
             total: totalCost,
             prize: '',
-            hairdresserId: selectedHairdresserId, // Nuovo: Aggiunto ID del parrucchiere
+            hairdresserId: selectedHairdresserId,
         };
+
+        // Trova o crea il profilo del cliente per aggiornare i punti
+        let clientProfile = clientProfiles.find(profile => profile.phone === clientPhone);
+
+        if (!clientProfile) {
+            const clientProfileRef = await addDoc(collection(db, "clientProfiles"), {
+                name: clientName,
+                phone: clientPhone,
+                loyaltyPoints: 0,
+            });
+            clientProfile = { id: clientProfileRef.id, name: clientName, phone: clientPhone, loyaltyPoints: 0 };
+            setClientProfiles(prev => [...prev, clientProfile as ClientProfile]);
+        }
+
+        // Calcola i punti guadagnati
+        const pointsEarned = newBooking.total * LOYALTY_SETTINGS.pointsPerEuro;
+
+        // Aggiorna i punti del cliente in Firestore
+        const updatedPoints = clientProfile.loyaltyPoints + pointsEarned;
+        await updateDoc(doc(db, "clientProfiles", clientProfile.id), { loyaltyPoints: updatedPoints });
+
+        // Collega l'appuntamento al profilo cliente
+        newBooking.clientId = clientProfile.id;
         
         const docRef = await addDoc(collection(db, "appointments"), newBooking);
-        setLastBookingId(docRef.id); // Firestore genera l'ID
+        setLastBookingId(docRef.id);
 
-        // Aggiorna lo stato localmente con l'ID generato (onSnapshot lo farà in background, ma questo è più immediato)
         setAppointments(prev => [...prev, { ...newBooking, id: docRef.id }]);
         
         setSelectedDate('');
         setSelectedSlot('');
         setSelectedTreatments([]);
         setClientName('');
-        setClientPhone(''); // Nuovo: Resetta il campo telefono
-        setSelectedHairdresserId(''); // Nuovo: Resetta il parrucchiere selezionato
+        setClientPhone('');
+        setSelectedHairdresserId('');
         setConfModalVisible(true);
     } catch (error) {
         console.error("Errore durante la prenotazione:", error);
@@ -1005,15 +1120,13 @@ export default function App() {
 
         if (prizeWon) {
           const prizeRef = doc(db, "prizes", prizeWon.id);
-          // PRIMA DI AGGIORNARE, LEGGI IL DOCUMENTO PER ASSICURARTI CHE ESISTA
           const prizeDocSnap = await getDoc(prizeRef);
           if (prizeDocSnap.exists()) {
-              const currentPrizeDocData = prizeDocSnap.data() as Prize; // Cast per TypeScript
+              const currentPrizeDocData = prizeDocSnap.data() as Prize;
               const today = getTodayString();
               const week = getWeekNumber(new Date());
               const month = getMonthString(new Date());
 
-              // Calcola i contatori aggiornati basati sui dati attuali nel DB
               const dailyCount = currentPrizeDocData.dispensed.daily?.date === today ? (currentPrizeDocData.dispensed.daily.count || 0) : 0;
               const weeklyCount = currentPrizeDocData.dispensed.weekly?.week === week ? (currentPrizeDocData.dispensed.weekly.count || 0) : 0;
               const monthlyCount = currentPrizeDocData.dispensed.monthly?.month === month ? (currentPrizeDocData.dispensed.monthly.count || 0) : 0;
@@ -1027,11 +1140,9 @@ export default function App() {
               });
           } else {
               console.warn(`Tentativo di aggiornare un premio non esistente: ${prizeWon.id}`);
-              // Puoi aggiungere qui una logica per creare il documento se non esiste, se appropriato
-              // Ad esempio: await setDoc(prizeRef, { ...prizeWon, dispensed: { ... } });
           }
         }
-      } catch (error: any) { // Tipizza l'errore come 'any' o 'FirebaseError' per accedere a .message
+      } catch (error: any) {
         console.error("Errore durante l'aggiornamento del premio:", error);
         showAlert("Errore", `Impossibile salvare i dati del premio: ${error.message || 'Errore sconosciuto'}`);
       }
@@ -1058,7 +1169,7 @@ export default function App() {
       }
 
       setIsGeneratingPromo(true);
-      setActivePromotionImage(null); // Resetta temporaneamente l'immagine
+      setActivePromotionImage(null);
 
       try {
           let backgroundPrompt = '';
@@ -1073,8 +1184,7 @@ export default function App() {
           }
           
           const payload = { instances: [{ prompt: backgroundPrompt }], parameters: { "sampleCount": 1} };
-          // CAMBIA QUI: Inserisci la tua VERA API Key di Google Gemini
-          const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0"; // La tua chiave API Gemini
+          const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
           
           const response = await fetch(apiUrl, {
@@ -1107,7 +1217,7 @@ export default function App() {
 
           await Promise.all([
               loadImage(backgroundImg, backgroundBase64),
-              loadImage(logoImg, salonLogoUrlFromFirestore) // Usa il logo caricato da Firestore
+              loadImage(logoImg, salonLogoUrlFromFirestore)
           ]);
           
           ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
@@ -1170,19 +1280,22 @@ export default function App() {
           });
 
           // FIREBASE STORAGE START: Caricamento su Firebase Storage
-          const imageFileName = `promotions/${Date.now()}.png`; // Nome file unico
-          const imageRef = ref(storage, imageFileName); // Crea un riferimento allo storage
-          await uploadBytes(imageRef, finalImageBlob); // Carica il Blob
-          const downloadURL = await getDownloadURL(imageRef); // Ottieni l'URL pubblico
+          const imageFileName = `promotions/${Date.now()}.png`;
+          const imageRef = ref(storage, imageFileName);
+          await uploadBytes(imageRef, finalImageBlob);
+          const downloadURL = await getDownloadURL(imageRef);
           // FIREBASE STORAGE END
 
           setActivePromotionImage(downloadURL);
           // FIREBASE: Salva l'URL dell'immagine in Firestore (associato alle impostazioni dell'app)
-          await updateDoc(doc(db, "settings", "appSettings"), { activePromotionImageUrl: downloadURL });
+          await updateDoc(doc(db, "settings", "appSettings"), {
+             activePromotionImageUrl: downloadURL,
+             promotionsGeneratedCount: promotionsGeneratedCount + 1,
+          });
 
           showAlert("Successo", "Immagine promozionale creata e impostata come splash screen!");
 
-      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      } catch (error: any) {
           console.error("Errore generazione immagine promo:", error);
           const errorMessage = error.message || "Errore sconosciuto";
           showAlert("Errore AI", `Errore durante la creazione dell'immagine promozionale: ${errorMessage}`);
@@ -1193,17 +1306,15 @@ export default function App() {
 
   // FIREBASE STORAGE START: Funzione removePromotionImage per Firebase Storage
   const removePromotionImage = async () => {
-    if (!activePromotionImage) return; // Se non c'è un'immagine attiva, non fare nulla
+    if (!activePromotionImage) return;
     try {
-      // Crea un riferimento all'immagine in Firebase Storage usando l'URL completo
       const imageToDeleteRef = ref(storage, activePromotionImage);
-      await deleteObject(imageToDeleteRef); // Elimina l'immagine da Firebase Storage
+      await deleteObject(imageToDeleteRef);
 
-      // Rimuovi l'URL dell'immagine dall'impostazione di Firestore
       await updateDoc(doc(db, "settings", "appSettings"), { activePromotionImageUrl: null });
-      setActivePromotionImage(null); // Aggiorna lo stato locale
+      setActivePromotionImage(null);
       showAlert("Successo", "Immagine promozionale rimossa!");
-    } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+    } catch (error: any) {
       console.error("Errore durante la rimozione dell'immagine promozionale:", error);
       showAlert("Errore", `Impossibile rimuovere l'immagine promozionale: ${error.message || 'Errore sconosciuto'}`);
     }
@@ -1239,13 +1350,12 @@ export default function App() {
       return;
     }
     try {
-      const logoFileName = `salon_logo/logo_${Date.now()}.png`; // Nome file unico
+      const logoFileName = `salon_logo/logo_${Date.now()}.png`;
       const logoRef = ref(storage, logoFileName);
       await uploadBytes(logoRef, tempLogoFile);
       const downloadURL = await getDownloadURL(logoRef);
 
-      // Elimina il vecchio logo se esiste un URL diverso dal placeholder di default
-      if (salonLogoUrlFromFirestore && salonLogoUrlFromFirestore !== SALON_INFO.logoUrl) { 
+      if (salonLogoUrlFromFirestore && salonLogoUrlFromFirestore !== SALON_INFO.logoUrl) {
         try {
           const oldPath = new URL(salonLogoUrlFromFirestore).pathname.split('/o/')[1].split('?')[0];
           const decodedOldPath = decodeURIComponent(oldPath);
@@ -1257,7 +1367,7 @@ export default function App() {
 
       await updateDoc(doc(db, "settings", "appSettings"), { salonLogoUrl: downloadURL });
       setSalonLogoUrlFromFirestore(downloadURL);
-      setTempLogoFile(null); // Resetta il file selezionato
+      setTempLogoFile(null);
       showAlert("Successo", "Logo caricato e aggiornato!");
     } catch (error: any) {
       console.error("Errore nel caricamento logo:", error);
@@ -1268,38 +1378,41 @@ export default function App() {
 
   // FIREBASE START - Funzione handleAccountingClosure modificata per Firestore
   const handleAccountingClosure = async () => {
-    const totalDue = appointments.length * COMMISSION_FEE;
+    const totalAppointmentsDue = appointments.length * commissionFee;
+    const totalPromotionsDue = promotionsGeneratedCount * promotionGenerationFee;
+    const totalDue = totalAppointmentsDue + totalPromotionsDue;
+
     const newClosure: ArchivedClosure = {
-        id: '', // Firestore genererà l'ID
+        id: '',
         date: new Date().toISOString(),
         appointmentCount: appointments.length,
         amountPaid: totalDue,
-        appointments: [...appointments] // Copia degli appuntamenti correnti
+        appointments: [...appointments],
+        promotionGenerationCost: totalPromotionsDue,
     };
 
     try {
-        await addDoc(collection(db, "archivedClosures"), newClosure); // Aggiungi la chiusura all'archivio
+        await addDoc(collection(db, "archivedClosures"), newClosure);
         
-        // Elimina tutti gli appuntamenti correnti dalla collezione "appointments"
         const q = collection(db, "appointments");
         const querySnapshot = await getDocs(q);
         const deletePromises = querySnapshot.docs.map(d => deleteDoc(doc(db, "appointments", d.id)));
         await Promise.all(deletePromises);
 
-        // Resetta i contatori dispensed dei premi
+        await updateDoc(doc(db, "settings", "appSettings"), { promotionsGeneratedCount: 0 });
+        setPromotionsGeneratedCount(0);
+
         const prizeResetPromises = prizes.map(p => {
           const prizeRef = doc(db, "prizes", p.id);
-          // Imposta dispensed a un oggetto vuoto, resettando i contatori
           return updateDoc(prizeRef, { dispensed: {} });
         });
         await Promise.all(prizeResetPromises);
 
 
-        // La rimozione degli appuntamenti dallo stato locale avverrà automaticamente tramite onSnapshot
         setIsAppLocked(false);
         setPaymentModalVisible(false);
         showAlert('Contabilità Chiusa', 'Pagamento registrato e contabilità chiusa con successo! App sbloccata.');
-    } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+    } catch (error: any) {
         console.error("Errore durante la chiusura contabile:", error);
         showAlert("Errore", `Impossibile chiudere la contabilità: ${error.message || 'Errore sconosciuto'}`);
     }
@@ -1318,19 +1431,34 @@ export default function App() {
   // FIREBASE START - Funzione saveSettings modificata per Firestore
   const saveSettings = async () => {
     const newThreshold = parseFloat(tempThreshold);
-    if (isNaN(newThreshold) || newThreshold <= 0) {
-        showAlert("Errore di input", "Inserisci un valore valido per la soglia.");
+    const newPromotionFee = parseFloat(tempPromotionGenerationFee);
+    const newCommissionFee = parseFloat(tempCommissionFee);
+    const newAutoPaymentThreshold = parseFloat(tempAutoPaymentThreshold);
+
+    if (isNaN(newThreshold) || newThreshold <= 0 ||
+        isNaN(newPromotionFee) || newPromotionFee < 0 ||
+        isNaN(newCommissionFee) || newCommissionFee < 0 ||
+        isNaN(newAutoPaymentThreshold) || newAutoPaymentThreshold <= 0)
+    {
+        showAlert("Errore di input", "Inserisci valori validi per tutte le tariffe e soglie.");
         return;
     }
     
     try {
         await updateDoc(doc(db, "settings", "appSettings"), {
-            commissionThreshold: newThreshold
+            commissionThreshold: newThreshold,
+            promotionGenerationFee: newPromotionFee,
+            commissionFee: newCommissionFee,
+            autoPaymentThreshold: newAutoPaymentThreshold,
         });
         setCommissionThreshold(newThreshold);
+        setPromotionGenerationFee(newPromotionFee);
+        setCommissionFee(newCommissionFee);
+        setAutoPaymentThreshold(newAutoPaymentThreshold);
+
         setAreSettingsUnlocked(false);
         showAlert('Impostazioni Salvate', 'Impostazioni salvate!');
-    } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+    } catch (error: any) {
         console.error("Errore nel salvataggio impostazioni:", error);
         showAlert("Errore", `Impossibile salvare le impostazioni: ${error.message || 'Errore sconosciuto'}`);
     }
@@ -1350,7 +1478,7 @@ export default function App() {
         setHairdresserPassword(tempHairdresserPassword);
         setAreSettingsUnlocked(false);
         showAlert('Password Aggiornata', 'Password parrucchiere aggiornata!');
-      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      } catch (error: any) {
         console.error("Errore nel salvataggio password parrucchiere:", error);
         showAlert("Errore", `Impossibile aggiornare la password: ${error.message || 'Errore sconosciuto'}`);
       }
@@ -1378,13 +1506,13 @@ export default function App() {
 
   const openTreatmentModal = (treatment: Treatment) => {
     setSelectedTreatmentForModal(treatment);
-    setAiDescription(''); // Clear previous description
+    setAiDescription('');
     setTreatmentModalVisible(true);
   };
 
   const openReminderModal = (app: Appointment) => {
     setSelectedAppointmentForReminder(app);
-    setReminderText(''); // Clear previous reminder
+    setReminderText('');
     setReminderModalVisible(true);
   };
 
@@ -1402,7 +1530,7 @@ export default function App() {
         });
         setNewTreatment({name: '', price: '', duration: ''});
         showAlert("Successo", "Trattamento aggiunto!");
-      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      } catch (error: any) {
         console.error("Errore nell'aggiunta trattamento:", error);
         showAlert("Errore", `Impossibile aggiungere il trattamento: ${error.message || 'Errore sconosciuto'}`);
       }
@@ -1412,7 +1540,7 @@ export default function App() {
       try {
         await deleteDoc(doc(db, "treatments", id));
         showAlert("Successo", "Trattamento eliminato!");
-      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      } catch (error: any) {
         console.error("Errore nell'eliminazione trattamento:", error);
         showAlert("Errore", `Impossibile eliminare il trattamento: ${error.message || 'Errore sconosciuto'}`);
       }
@@ -1431,7 +1559,7 @@ export default function App() {
         });
         setNewPrize('');
         showAlert("Successo", "Premio aggiunto!");
-      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      } catch (error: any) {
         console.error("Errore nell'aggiunta premio:", error);
         showAlert("Errore", `Impossibile aggiungere il premio: ${error.message || 'Errore sconosciuto'}`);
       }
@@ -1441,7 +1569,7 @@ export default function App() {
       try {
         await deleteDoc(doc(db, "prizes", idToDelete));
         showAlert("Successo", "Premio eliminato!");
-      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      } catch (error: any) {
         console.error("Errore nell'eliminazione premio:", error);
         showAlert("Errore", `Impossibile eliminare il premio: ${error.message || 'Errore sconosciuto'}`);
       }
@@ -1457,11 +1585,11 @@ export default function App() {
             limits: { ...currentPrize.limits, [period]: parsedValue }
           });
         }
-      } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+      } catch (error: any) {
         console.error("Errore nell'aggiornamento limite premio:", error);
         showAlert("Errore", `Impossibile aggiornare il limite del premio: ${error.message || 'Errore sconosciuto'}`);
       }
-  }
+  };
 
   // Nuovo: Gestione Parrucchieri - Aggiunta
   const handleAddHairdresser = async () => {
@@ -1470,7 +1598,20 @@ export default function App() {
           return;
       }
       try {
-          await addDoc(collection(db, "hairdressers"), { name: newHairdresserName });
+          await addDoc(collection(db, "hairdressers"), {
+            name: newHairdresserName,
+            workingHours: {
+                monday: { start: '09:00', end: '18:00' },
+                tuesday: { start: '09:00', end: '18:00' },
+                wednesday: { start: '09:00', end: '18:00' },
+                thursday: { start: '09:00', end: '18:00' },
+                friday: { start: '09:00', end: '18:00' },
+                saturday: { start: '09:00', end: '13:00' },
+                sunday: null,
+            },
+            absentDates: [],
+            stripeCustomerId: undefined,
+          });
           setNewHairdresserName('');
           showAlert("Successo", "Parrucchiere aggiunto!");
       } catch (error: any) {
@@ -1503,8 +1644,8 @@ export default function App() {
         const prompt = `Agisci come un esperto hair stylist. Un cliente cerca un consiglio per un look. L'occasione è "${aiAnswers.occasion}" e il suo stile personale è "${aiAnswers.style}". Fornisci un suggestion dettagliato e creativo per un taglio e colore, spiegando perché si adatta al contesto. Sii incoraggiante e professionale.`;
 
         let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-        const payload = { contents: chatHistory }; 
-        const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0"; 
+        const payload = { contents: chatHistory };
+        const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         try {
@@ -1513,7 +1654,7 @@ export default function App() {
             if (result.candidates && result.candidates[0].content.parts[0].text) {
                 setAiSuggestion(result.candidates[0].content.parts[0].text);
             } else { throw new Error("Risposta non valida dall'AI."); }
-        } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+        } catch (error: any) {
             console.error("Errore AI:", error);
             setAiSuggestion("Siamo spiacenti, si è verificato un errore. Riprova più tardi.");
         } finally {
@@ -1540,7 +1681,7 @@ export default function App() {
                 if (result.candidates && result.candidates[0].content.parts[0].text) {
                     setAiDescription(result.candidates[0].content.parts[0].text);
                 } else { throw new Error("Risposta non valida dall'AI."); }
-            } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+            } catch (error: any) {
                 console.error("Errore AI:", error);
                 setAiDescription("Non è stato possibile caricare la descrizione.");
             } finally {
@@ -1556,13 +1697,13 @@ export default function App() {
             if (!isReminderModalVisible || !selectedAppointmentForReminder || reminderText) return;
             
             setIsGeneratingReminder(true);
-            const { clientName, date, time, clientPhone, hairdresserId } = selectedAppointmentForReminder; // Incluso clientPhone e hairdresserId
+            const { clientName, date, time, clientPhone, hairdresserId } = selectedAppointmentForReminder;
             const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
             
             const hairdresser = hairdressers.find(hd => hd.id === hairdresserId);
-            const hairdresserName = hairdresser ? ` con ${hairdresser.name}` : ''; // Aggiungi il nome del parrucchiere se trovato
+            const hairdresserName = hairdresser ? ` con ${hairdresser.name}` : '';
 
-            const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time}${hairdresserName} presso "${salonNameFromFirestore}". Il loro numero di telefono è ${clientPhone}. Aggiungi un tocco di entusiasmo.`; // Usa salonNameFromFirestore, clientPhone e hairdresserName
+            const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time}${hairdresserName} presso "${salonNameFromFirestore}". Il loro numero di telefono è ${clientPhone}. Aggiungi un tocco di entusiasmo.`;
 
             let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
@@ -1575,7 +1716,7 @@ export default function App() {
                 if (result.candidates && result.candidates[0].content.parts[0].text) {
                     setReminderText(result.candidates[0].content.parts[0].text);
                 } else { throw new Error("Risposta non valida dall'AI."); }
-            } catch (error: any) { // Tipizza l'errore come 'any' per accedere a .message
+            } catch (error: any) {
                 console.error("Errore AI:", error);
                 setReminderText(`Ciao ${clientName}! Ti ricordiamo il tuo appuntamento da ${salonNameFromFirestore} per il giorno ${formattedDate} alle ore ${time}${hairdresserName}. A presto!`);
             } finally {
@@ -1583,7 +1724,7 @@ export default function App() {
             }
         };
         generateReminder();
-    }, [isReminderModalVisible, selectedAppointmentForReminder, reminderText, salonNameFromFirestore, hairdressers]); // Dipendenza da salonNameFromFirestore e hairdressers
+    }, [isReminderModalVisible, selectedAppointmentForReminder, reminderText, salonNameFromFirestore, hairdressers]);
 
   // --- Funzioni di Rendering ---
   const renderHomeScreen = () => (
@@ -1622,15 +1763,15 @@ export default function App() {
         selectedDate={selectedDate}
         onDateSelect={(date: string) => {
             setSelectedDate(date);
-            setSelectedSlot(''); // Reset selected slot when date changes
-            setSelectedHairdresserId(''); // Reset selected hairdresser when date changes
+            setSelectedSlot('');
+            setSelectedHairdresserId('');
         }}
       />
 
       {selectedDate && (
         <>
-          <h2 style={styles.sectionTitle}>2. Scegli il tuo parrucchiere</h2> {/* Nuovo passaggio */}
-          <div style={styles.slotsContainer}> {/* Riusiamo lo stile slotContainer */}
+          <h2 style={styles.sectionTitle}>2. Scegli il tuo parrucchiere</h2>
+          <div style={styles.slotsContainer}>
             {hairdressers.map(hd => (
               <button
                 key={hd.id}
@@ -1640,7 +1781,7 @@ export default function App() {
                 }}
                 onClick={() => {
                     setSelectedHairdresserId(hd.id);
-                    setSelectedSlot(''); // Resetta lo slot quando cambia il parrucchiere
+                    setSelectedSlot('');
                 }}
               >
                 {hd.name}
@@ -1650,12 +1791,11 @@ export default function App() {
         </>
       )}
 
-      {selectedHairdresserId && selectedDate && ( // Ora dipende dal parrucchiere scelto e dalla data
+      {selectedHairdresserId && selectedDate && (
         <>
-          <h2 style={styles.sectionTitle}>3. Scegli l'orario</h2> {/* Ora step 3 */}
+          <h2 style={styles.sectionTitle}>3. Scegli l'orario</h2>
           <div style={styles.slotsContainer}>
-            {AVAILABLE_SLOTS.map(time => {
-              // Verifica se lo slot è già prenotato per la data E il parrucchiere selezionato
+            {getHairdresserAvailableSlots(selectedDate, selectedHairdresserId).map(time => {
               const isBooked = appointments.some(app => 
                 app.date === selectedDate && 
                 app.time === time && 
@@ -1667,41 +1807,87 @@ export default function App() {
         </>
       )}
 
-      {selectedSlot && selectedHairdresserId && ( // Ora dipende anche dal parrucchiere
+      {selectedSlot && selectedHairdresserId && (
         <>
-          <h2 style={styles.sectionTitle}>4. Scegli i trattamenti</h2> {/* Ora step 4 */}
+          <h2 style={styles.sectionTitle}>4. Scegli i trattamenti</h2>
           {treatments.map(item => <TreatmentItem key={item.id} item={item} onSelect={handleSelectTreatment} isSelected={selectedTreatments.some(t => t.id === item.id)} onInfoClick={openTreatmentModal} /> )}
         </>
       )}
 
-      {selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && ( // Tutte le dipendenze
-          <>
-            <h2 style={styles.sectionTitle}>5. Inserisci i tuoi dati</h2> {/* Ora step 5 */}
-            <input type="text" style={styles.inputField} placeholder="Il tuo Nome e Cognome" value={clientName} onChange={(e) => setClientName(e.target.value)} />
-            <input type="tel" style={styles.inputField} placeholder="Il tuo Numero di Telefono" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
-          </>
+      {/* --- CORREZIONE QUI: Spostiamo questi campi fuori dal blocco di controllo totale --- */}
+      {selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && (
+          <h2 style={styles.sectionTitle}>5. Inserisci i tuoi dati</h2>
       )}
+      {selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && (
+        <>
+          <input type="text" style={styles.inputField} placeholder="Il tuo Nome e Cognome" value={clientName} onChange={(e) => setClientName(e.target.value)} />
+          <input type="tel" style={styles.inputField} placeholder="Il tuo Numero di Telefono" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
+        </>
+      )}
+      {/* --- FINE CORREZIONE --- */}
       
-      {clientName && clientPhone && selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && ( // Tutte le dipendenze
-        <div style={styles.summaryContainer}>
-            <h3 style={styles.summaryTitle}>Riepilogo Prenotazione</h3>
-            <p style={styles.summaryText}><b>Nome:</b> {clientName}</p>
-            <p style={styles.summaryText}><b>Telefono:</b> {clientPhone}</p>
-            <p style={styles.summaryText}><b>Data:</b> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</p>
-            <p style={styles.summaryText}><b>Orario:</b> {selectedSlot}</p>
-            <p style={styles.summaryText}><b>Parrucchiere:</b> {hairdressers.find(hd => hd.id === selectedHairdresserId)?.name || 'N/A'}</p>
-            <p style={styles.summaryText}><b>Trattamenti:</b> {selectedTreatments.map(t => t.name).join(', ')}</p>
-            <p style={styles.summaryTotal}>Totale: €{totalCost}</p>
-            <button style={styles.ctaButton} onClick={handleBooking}>
-                Conferma Prenotazione
-            </button>
-        </div>
+      {clientName && clientPhone && selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && (
+        <>
+            {/* Nuovo: Sezione Punti Fedeltà */}
+            {clientPhone.trim() && (
+                <div style={styles.summaryContainer}>
+                    <h3 style={styles.summaryTitle}>Punti Fedeltà</h3>
+                    {(() => {
+                        const currentClient = clientProfiles.find(p => p.phone === clientPhone);
+                        if (!currentClient) {
+                            return <p style={styles.summaryText}>Registrati con questo numero per iniziare a guadagnare punti!</p>;
+                        }
+                        return (
+                            <>
+                                <p style={styles.summaryText}>Hai accumulato: <b>{currentClient.loyaltyPoints} punti</b></p>
+                                <p style={styles.summaryText}>Punti guadagnati con questa prenotazione: <b>+{totalCost * LOYALTY_SETTINGS.pointsPerEuro}</b></p>
+                                <h4 style={styles.subSectionTitle}>Riscatta Premio:</h4>
+                                {LOYALTY_SETTINGS.thresholds.map(threshold => (
+                                    <button
+                                        key={threshold.points}
+                                        style={{
+                                            ...styles.smallButton,
+                                            marginRight: '10px',
+                                            backgroundColor: currentClient.loyaltyPoints >= threshold.points ? '#4CAF50' : '#555',
+                                            color: currentClient.loyaltyPoints >= threshold.points ? '#1a1a1a' : '#aaa',
+                                            cursor: currentClient.loyaltyPoints >= threshold.points ? 'pointer' : 'not-allowed',
+                                        }}
+                                        disabled={currentClient.loyaltyPoints < threshold.points}
+                                        onClick={() => {
+                                            showAlert("Riscatto Premio", `Hai riscattato ${threshold.description}! I tuoi punti verranno aggiornati dopo la conferma della prenotazione.`);
+                                        }}
+                                    >
+                                        {threshold.description} ({threshold.points} punti)
+                                    </button>
+                                ))}
+                            </>
+                        );
+                    })()}
+                </div>
+            )}
+
+            <div style={styles.summaryContainer}>
+                <h3 style={styles.summaryTitle}>Riepilogo Prenotazione</h3>
+                <p style={styles.summaryText}><b>Nome:</b> {clientName}</p>
+                <p style={styles.summaryText}><b>Telefono:</b> {clientPhone}</p>
+                <p style={styles.summaryText}><b>Data:</b> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</p>
+                <p style={styles.summaryText}><b>Orario:</b> {selectedSlot}</p>
+                <p style={styles.summaryText}><b>Parrucchiere:</b> {hairdressers.find(hd => hd.id === selectedHairdresserId)?.name || 'N/A'}</p>
+                <p style={styles.summaryText}><b>Trattamenti:</b> {selectedTreatments.map(t => t.name).join(', ')}</p>
+                <p style={styles.summaryTotal}>Totale: €{totalCost}</p>
+                <button style={styles.ctaButton} onClick={handleBooking}>
+                    Conferma Prenotazione
+                </button>
+            </div>
+        </>
       )}
     </div>
   );
 
   const renderAdminScreen = () => {
-    const totalDue = appointments.length * COMMISSION_FEE;
+    const totalAppointmentsDue = appointments.length * commissionFee;
+    const totalPromotionsDue = promotionsGeneratedCount * promotionGenerationFee;
+    const totalDue = totalAppointmentsDue + totalPromotionsDue;
     
     return (
       <div style={styles.page}>
@@ -1790,29 +1976,36 @@ export default function App() {
                 <p style={styles.statLabel}>Appuntamenti da pagare</p>
             </div>
             <div style={styles.statBox}>
+                <p style={styles.statValue}>€ {totalAppointmentsDue.toFixed(2)}</p>
+                <p style={styles.statLabel}>Commissioni Appuntamenti</p>
+            </div>
+             <div style={styles.statBox}>
+                <p style={styles.statValue}>€ {totalPromotionsDue.toFixed(2)}</p>
+                <p style={styles.statLabel}>Costi Promozioni ({promotionsGeneratedCount}x)</p>
+            </div>
+            <div style={styles.statBox}>
                 <p style={styles.statValue}>€ {totalDue.toFixed(2)}</p>
-                <p style={styles.statLabel}>Commissioni Dovute</p>
+                <p style={styles.statLabel}>Totale Dovuto</p>
             </div>
         </div>
 
         <button 
             style={{ ...styles.ctaButton, ...(appointments.length === 0 && styles.ctaButtonDisabled), ...(isAppLocked && styles.ctaButtonAlert) }}
             onClick={() => setPaymentModalVisible(true)}
-            disabled={appointments.length === 0}
+            disabled={appointments.length === 0 && promotionsGeneratedCount === 0}
         >
             {isAppLocked ? 'PAGA ORA' : 'Chiudi Contabilità e Paga'}
         </button>
         
         <h2 style={styles.sectionTitle}>Dettaglio Appuntamenti Correnti</h2>
         {appointments.length > 0 ? (
-            // Sort appointments by date for better readability
             [...appointments].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((app) => {
-                const assignedHairdresser = hairdressers.find(hd => hd.id === app.hairdresserId); // Trova il parrucchiere assegnato
+                const assignedHairdresser = hairdressers.find(hd => hd.id === app.hairdresserId);
                 return (
                     <div key={app.id} style={styles.appointmentCard}>
                       <p style={styles.appointmentClient}>{app.clientName}</p>
                       <p style={styles.appointmentDate}>{new Date(app.date + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})} alle {app.time}</p>
-                      {assignedHairdresser && ( // Nuovo: Mostra parrucchiere assegnato
+                      {assignedHairdresser && (
                         <p style={styles.appointmentServices}>Parrucchiere: {assignedHairdresser.name}</p>
                       )}
                       {app.prize && !app.prize.includes('Ritenta') && (
@@ -1831,11 +2024,32 @@ export default function App() {
                     <div key={closure.id} style={styles.appointmentCard}>
                                         <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
                                         <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
+                                        {closure.promotionGenerationCost !== undefined && (
+                                            <p style={styles.appointmentServices}>Costo Promozioni: €{closure.promotionGenerationCost.toFixed(2)}</p>
+                                        )}
                                         <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
                     </div>
                 ))
             ) : <p style={styles.noAppointmentsText}>Nessuna chiusura archiviata.</p>}
         </div>
+
+        <h2 style={styles.sectionTitle}>Opzioni di Pagamento Automatico</h2>
+        {hairdressers.map(hd => (
+            <div key={hd.id} style={styles.appointmentCard}>
+                <p style={styles.appointmentClient}>{hd.name}</p>
+                <button
+                    style={styles.smallButton}
+                    onClick={() => {
+                        setSelectedHairdresserForPayment(hd);
+                        setIsPaymentSetupModalVisible(true);
+                    }}
+                >
+                    {hd.stripeCustomerId ? 'Modifica Carta' : 'Configura Pagamento Automatico'}
+                </button>
+                {hd.stripeCustomerId && <p style={{...styles.summaryText, marginTop: '10px'}}>Pagamento automatico configurato.</p>}
+            </div>
+        ))}
+
       </div>
     );
   };
@@ -1940,7 +2154,7 @@ export default function App() {
     }, [prizes]);
 
     useEffect(() => {
-      if(!prize || !canvasRef.current) return; 
+      if(!prize || !canvasRef.current) return;
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -2051,7 +2265,7 @@ export default function App() {
       <div style={styles.modalOverlay} onClick={() => setPaymentModalVisible(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
               <h2 style={styles.modalTitle}>Conferma Pagamento</h2>
-              <p style={styles.modalMessage}>Stai per saldare le commissioni per <b>{appointments.length} appuntamenti</b>, per un totale di <b>€{(appointments.length * COMMISSION_FEE).toFixed(2)}</b>.</p>
+              <p style={styles.modalMessage}>Stai per saldare le commissioni per <b>{appointments.length} appuntamenti</b> (totale commissioni: €{(appointments.length * commissionFee).toFixed(2)}) e i costi di generazione promozioni (totale: €{(promotionsGeneratedCount * promotionGenerationFee).toFixed(2)}), per un totale di <b>€{(appointments.length * commissionFee + promotionsGeneratedCount * promotionGenerationFee).toFixed(2)}</b>.</p>
               <button style={styles.ctaButton} onClick={handleAccountingClosure}>Conferma e Paga Ora</button>
               <button style={styles.modalButton} onClick={() => setPaymentModalVisible(false)}>Annulla</button>
           </div>
@@ -2108,14 +2322,11 @@ export default function App() {
                     style={{...styles.inputField, padding: '10px', height: 'auto'}} 
                 />
                 <button onClick={handleLogoUpload} style={styles.smallButton} disabled={!tempLogoFile}>Carica Nuovo Logo</button>
-                {salonLogoUrlFromFirestore !== SALON_INFO.logoUrl && ( // Permetti di rimuovere solo se non è il logo placeholder
+                {salonLogoUrlFromFirestore !== SALON_INFO.logoUrl && (
                   <button onClick={() => {
-                    // Chiedi conferma prima di rimuovere il logo
                     if (window.confirm("Sei sicuro di voler rimuovere il logo personalizzato?")) {
-                      // Imposta salonLogoUrlFromFirestore a SALON_INFO.logoUrl direttamente senza cancellare da Storage
-                      // L'obiettivo è ripristinare il default, non necessariamente cancellare il file
                       updateDoc(doc(db, "settings", "appSettings"), { salonLogoUrl: SALON_INFO.logoUrl });
-                      setSalonLogoUrlFromFirestore(SALON_INFO.logoUrl); // Aggiorna lo stato locale
+                      setSalonLogoUrlFromFirestore(SALON_INFO.logoUrl);
                       showAlert("Logo Rimosso", "Il logo personalizzato è stato rimosso e ripristinato a quello di default.");
                     }
                   }} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Ripristina Logo Default</button>
@@ -2140,18 +2351,108 @@ export default function App() {
             </div>
 
             <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Gestione Parrucchieri</h3> {/* Nuovo: Sezione per la gestione dei parrucchieri */}
+                <h3 style={styles.subSectionTitle}>Gestione Parrucchieri</h3>
                 <ul style={styles.managementList}>
                    {hairdressers.map(hd => (
                         <li key={hd.id} style={styles.managementListItem}>
                             <span>{hd.name}</span>
-                            <button onClick={() => handleDeleteHairdresser(hd.id)} style={styles.deleteButton}>X</button>
+                            <div>
+                                <button onClick={() => handleDeleteHairdresser(hd.id)} style={styles.deleteButton}>X</button>
+                                <button onClick={() => {
+                                    setEditingHairdresser(hd);
+                                    setTempHairdresserWorkingHours(hd.workingHours || {});
+                                    setTempHairdresserAbsentDates(hd.absentDates || []);
+                                }} style={styles.smallButton}>Modifica Orari</button>
+                            </div>
                         </li>
                    ))}
                 </ul>
                 <input type="text" value={newHairdresserName} onChange={(e) => setNewHairdresserName(e.target.value)} placeholder="Nome nuovo parrucchiere" style={{...styles.inputField, marginBottom: '10px'}} />
                 <button onClick={handleAddHairdresser} style={styles.smallButton}>Aggiungi Parrucchiere</button>
             </div>
+            
+            {editingHairdresser && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <h2 style={styles.modalTitle}>Modifica Orari per {editingHairdresser.name}</h2>
+                        <h4 style={styles.subSectionTitle}>Orari Settimanali</h4>
+                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
+                            <div key={day} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '10px' }}>
+                                <label style={{ flex: 1, textTransform: 'capitalize' }}>{day.charAt(0).toUpperCase() + day.slice(1)}:</label>
+                                <input
+                                    type="time"
+                                    value={tempHairdresserWorkingHours[day]?.start || ''}
+                                    onChange={(e) => setTempHairdresserWorkingHours(prev => ({
+                                        ...prev,
+                                        [day]: e.target.value ? { start: e.target.value, end: prev[day]?.end || '18:00' } : null
+                                    }))}
+                                    style={styles.inputField}
+                                />
+                                <span>-</span>
+                                <input
+                                    type="time"
+                                    value={tempHairdresserWorkingHours[day]?.end || ''}
+                                    onChange={(e) => setTempHairdresserWorkingHours(prev => ({
+                                        ...prev,
+                                        [day]: e.target.value ? { start: prev[day]?.start || '09:00', end: e.target.value } : null
+                                    }))}
+                                    style={styles.inputField}
+                                />
+                                <input
+                                    type="checkbox"
+                                    checked={tempHairdresserWorkingHours[day] === null}
+                                    onChange={(e) => setTempHairdresserWorkingHours(prev => ({
+                                        ...prev,
+                                        [day]: e.target.checked ? null : { start: '09:00', end: '18:00' }
+                                    }))}
+                                /> Riposo
+                            </div>
+                        ))}
+
+                        <h4 style={styles.subSectionTitle}>Date di Assenza (Ferie, Malattie, ecc.)</h4>
+                        <p style={styles.modalMessage}>Aggiungi date specifiche in cui il parrucchiere non sarà disponibile.</p>
+                        <input
+                            type="date"
+                            onChange={(e) => {
+                                const newDate = e.target.value;
+                                if (newDate && !tempHairdresserAbsentDates.includes(newDate)) {
+                                    setTempHairdresserAbsentDates(prev => [...prev, newDate].sort());
+                                }
+                            }}
+                            style={styles.inputField}
+                        />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '10px' }}>
+                            {tempHairdresserAbsentDates.map(date => (
+                                <span key={date} style={{ backgroundColor: '#555', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    {new Date(date).toLocaleDateString('it-IT')}
+                                    <button onClick={() => setTempHairdresserAbsentDates(prev => prev.filter(d => d !== date))} style={{ background: 'none', border: 'none', color: '#d9534f', cursor: 'pointer', fontSize: '14px' }}>&times;</button>
+                                </span>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const hdRef = doc(db, "hairdressers", editingHairdresser.id);
+                                    await updateDoc(hdRef, {
+                                        workingHours: tempHairdresserWorkingHours,
+                                        absentDates: tempHairdresserAbsentDates,
+                                    });
+                                    setEditingHairdresser(null);
+                                    showAlert("Successo", "Orari parrucchiere aggiornati!");
+                                } catch (error: any) {
+                                    console.error("Errore nell'aggiornamento orari parrucchiere:", error);
+                                    showAlert("Errore", `Impossibile aggiornare gli orari: ${error.message || 'Errore sconosciuto'}`);
+                                }
+                            }}
+                            style={styles.ctaButton}
+                        >
+                            Salva Orari
+                        </button>
+                        <button style={styles.modalButton} onClick={() => setEditingHairdresser(null)}>Annulla</button>
+                    </div>
+                </div>
+            )}
 
             <div style={styles.settingsSection}>
                 <h3 style={styles.subSectionTitle}>Gestione Premi Gratta e Vinci</h3>
@@ -2173,7 +2474,7 @@ export default function App() {
             </div>
 
             <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Impostazioni Pagamento</h3>
+                <h3 style={styles.subSectionTitle}>Impostazioni Pagamenti</h3>
                 {!areSettingsUnlocked ? (
                     <div>
                         <input type="password" value={settingsPassword} onChange={(e) => setSettingsPassword(e.target.value)} placeholder="Password Amministratore" style={styles.inputField} />
@@ -2181,9 +2482,19 @@ export default function App() {
                     </div>
                 ) : (
                     <div>
-                        <label style={{display: 'block', marginBottom: '10px'}}>Soglia di Pagamento (€)</label>
+                        <label style={{display: 'block', marginBottom: '10px'}}>Soglia di Pagamento Manuale (€)</label>
                         <input type="number" value={tempThreshold} onChange={(e) => setTempThreshold(e.target.value)} style={styles.inputField} step="5" min="5" />
-                        <button onClick={saveSettings} style={styles.smallButton}>Salva Impostazioni</button>
+                        
+                        <label style={{display: 'block', marginTop: '20px', marginBottom: '10px'}}>Costo Generazione Immagine Promozionale (€)</label>
+                        <input type="number" value={tempPromotionGenerationFee} onChange={(e) => setTempPromotionGenerationFee(e.target.value)} style={styles.inputField} step="1" min="0" />
+
+                        <label style={{display: 'block', marginTop: '20px', marginBottom: '10px'}}>Commissione per Appuntamento (€)</label>
+                        <input type="number" value={tempCommissionFee} onChange={(e) => setTempCommissionFee(e.target.value)} style={styles.inputField} step="0.10" min="0" />
+
+                        <label style={{display: 'block', marginTop: '20px', marginBottom: '10px'}}>Soglia Pagamento Automatico (€)</label>
+                        <input type="number" value={tempAutoPaymentThreshold} onChange={(e) => setTempAutoPaymentThreshold(e.target.value)} style={styles.inputField} step="10" min="10" />
+
+                        <button onClick={saveSettings} style={styles.smallButton}>Salva Impostazioni Pagamenti</button>
                     </div>
                 )}
             </div>
@@ -2192,6 +2503,49 @@ export default function App() {
         </div>
     </div>
   );
+
+    const PaymentSetupModal = () => {
+        if (!selectedHairdresserForPayment) return null;
+
+        const handleSubmitCard = async () => {
+            try {
+                showAlert("Elaborazione...", "Invio dettagli di pagamento...");
+                const simulatedCustomerId = `cus_${Math.random().toString(36).substring(2, 15)}`;
+                const updatedHairdressers = hairdressers.map(hd =>
+                    hd.id === selectedHairdresserForPayment.id ? { ...hd, stripeCustomerId: simulatedCustomerId } : hd
+                );
+                setHairdressers(updatedHairdressers);
+                await updateDoc(doc(db, "hairdressers", selectedHairdresserForPayment.id), { stripeCustomerId: simulatedCustomerId });
+                showAlert("Successo (Simulato)", "Metodo di pagamento configurato! (Simulato)");
+                setIsPaymentSetupModalVisible(false);
+
+            } catch (error) {
+                console.error("Errore durante la configurazione del pagamento:", error);
+                showAlert("Errore", "Impossibile configurare il pagamento. Riprova.");
+            }
+        };
+
+        return (
+            <div style={styles.modalOverlay} onClick={() => setIsPaymentSetupModalVisible(false)}>
+                <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <h2 style={styles.modalTitle}>Configura Pagamento Automatico per {selectedHairdresserForPayment.name}</h2>
+                    <p style={styles.modalMessage}>Inserisci i dettagli della carta di credito. I pagamenti saranno elaborati automaticamente al raggiungimento della soglia impostata dall'amministratore (€{autoPaymentThreshold.toFixed(2)}).</p>
+                    
+                    <div style={{ padding: '20px', border: '1px dashed #e6c300', borderRadius: '8px', marginBottom: '20px', color: '#ccc' }}>
+                        [Qui si integrerebbe il form della carta di credito di un gateway come Stripe Elements]
+                        <input type="text" placeholder="Numero Carta (placeholder)" style={{...styles.inputField, marginTop: '10px'}} />
+                        <div style={{display: 'flex', gap: '10px'}}>
+                            <input type="text" placeholder="MM/AA (placeholder)" style={{...styles.inputField, flex: 1}} />
+                            <input type="text" placeholder="CVC (placeholder)" style={{...styles.inputField, flex: 1}} />
+                        </div>
+                    </div>
+                    
+                    <button style={styles.ctaButton} onClick={handleSubmitCard}>Salva Carta</button>
+                    <button style={styles.modalButton} onClick={() => setIsPaymentSetupModalVisible(false)}>Annulla</button>
+                </div>
+            </div>
+        );
+    };
 
 
   return (
@@ -2239,6 +2593,7 @@ export default function App() {
       {isPaymentModalVisible && renderPaymentModal()}
       {isSuperAdminVisible && renderSuperAdminModal()}
       {isHairdresserLoginModalVisible && renderHairdresserLoginModal()}
+      {isPaymentSetupModalVisible && <PaymentSetupModal />}
 
       {/* Custom Alert Dialog */}
       {alertDialog.visible && (

@@ -295,21 +295,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una coppia (un'uomo e una donna) con tagli di capelli artistici e d'avanguardia, immersi in un contesto di sfondo casuale, ma elegante e di lusso (es. un loft urbano, un giardino segreto, una galleria d'arte). Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività degli hairstyle in relazione all'ambiente circostante. L'illuminazione deve essere drammatica per esaltare i dettagli dei tagli e i colori. L'immagine non deve contenere testo, loghi o brand.";
       }
       
-      const payload = { instances: [{ prompt: backgroundPrompt }], parameters: { "sampleCount": 1} };
-      const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
-      
-      const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-      });
-      const result = await response.json();
-
-      if (!result.predictions || result.predictions.length === 0 || !result.predictions[0].bytesBase64Encoded) {
-          throw new Error("La generazione dello sfondo AI è fallita.");
-      }
-      const backgroundBase64 = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+      // Generazione immagine tramite Pollinations.ai: gratuito, senza chiave API né quota.
+      const seed = Date.now() % 1000000;
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(backgroundPrompt)}?width=1024&height=1024&nologo=true&model=flux&seed=${seed}`;
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -318,6 +306,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       canvas.height = 1024;
 
       const backgroundImg = new Image();
+      backgroundImg.crossOrigin = "Anonymous";
       const logoImg = new Image();
       logoImg.crossOrigin = "Anonymous";
 
@@ -328,7 +317,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
 
       await Promise.all([
-          loadImage(backgroundImg, backgroundBase64),
+          loadImage(backgroundImg, pollinationsUrl),
           loadImage(logoImg, hairdresserProfile.salonLogoUrl!)
       ]);
       

@@ -11,6 +11,7 @@ import { getWeekNumber, getTodayString, getMonthString } from './utils/helpers';
 import { db, storage } from './utils/firebaseConfig'; // Percorso corretto per firebaseConfig
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import html2canvas from "html2canvas";
 // FIREBASE END
 
 
@@ -1112,83 +1113,64 @@ export default function App() {
       }
       setIsGeneratingPromo(true);
       try {
-          let backgroundPrompt = '';
-          if (promoSubject === 'woman') {
-            backgroundPrompt = "luxury hairstyle photoshoot woman, professional haircut, dramatic studio lighting, fashion magazine";
-          } else if (promoSubject === 'man') {
-            backgroundPrompt = "luxury hairstyle photoshoot man, professional haircut, dramatic studio lighting, fashion magazine";
-          } else if (promoSubject === 'couple') {
-            backgroundPrompt = "luxury hairstyle photoshoot couple, professional haircuts, dramatic studio lighting, fashion magazine";
-          } else if (promoSubject === 'scenario') {
-            backgroundPrompt = "luxury hairstyle photoshoot couple, upscale interior setting, dramatic lighting, fashion magazine";
-          }
-          // Generazione promo diretta con canvas (niente API esterna, zero blocchi).
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          if (!ctx) throw new Error("Impossibile ottenere il contesto del canvas");
-          canvas.width = 1024;
-          canvas.height = 1024;
-          // Sfondo: gradiente lussuoso (nero→grigio scuro).
-          const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-          grad.addColorStop(0, '#1a1a2e');
-          grad.addColorStop(1, '#16213e');
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          // Accento dorato in alto (per eleganza).
-          ctx.fillStyle = '#d4af37';
-          ctx.fillRect(0, 0, canvas.width, 8);
-          // Carica il logo se disponibile (opzionale).
-          let logoImg: HTMLImageElement | null = null;
+          // Crea un div invisibile con il design della promo
+          const promoDiv = document.createElement('div');
+          promoDiv.style.position = 'absolute';
+          promoDiv.style.left = '-9999px';
+          promoDiv.style.width = '1024px';
+          promoDiv.style.height = '1024px';
+          promoDiv.style.background = 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)';
+          promoDiv.style.display = 'flex';
+          promoDiv.style.flexDirection = 'column';
+          promoDiv.style.alignItems = 'center';
+          promoDiv.style.justifyContent = 'center';
+          promoDiv.style.padding = '60px';
+          promoDiv.style.boxSizing = 'border-box';
+          promoDiv.style.fontFamily = '"Montserrat", "Helvetica Neue", sans-serif';
+
+          // Testo principale
+          const textDiv = document.createElement('div');
+          textDiv.textContent = promoDescription;
+          textDiv.style.color = '#FFFFFF';
+          textDiv.style.fontSize = '72px';
+          textDiv.style.fontWeight = 'bold';
+          textDiv.style.textAlign = 'center';
+          textDiv.style.textShadow = '2px 2px 12px rgba(0, 0, 0, 0.8)';
+          textDiv.style.lineHeight = '1.2';
+          promoDiv.appendChild(textDiv);
+
+          // Logo (opzionale)
           if (salonLogoUrlFromFirestore) {
-              logoImg = new Image();
-              logoImg.crossOrigin = "Anonymous";
-              try {
-                  await new Promise<void>((resolve, reject) => {
-                      logoImg!.onload = () => resolve();
-                      logoImg!.onerror = () => reject(new Error("Logo non disponibile"));
-                      logoImg!.src = salonLogoUrlFromFirestore;
-                  });
-              } catch (_) { logoImg = null; }
+              const logoImg = document.createElement('img');
+              logoImg.src = salonLogoUrlFromFirestore;
+              logoImg.style.position = 'absolute';
+              logoImg.style.bottom = '30px';
+              logoImg.style.right = '30px';
+              logoImg.style.width = '150px';
+              logoImg.style.height = '150px';
+              logoImg.style.borderRadius = '50%';
+              logoImg.style.background = 'rgba(255, 255, 255, 0.15)';
+              logoImg.style.padding = '10px';
+              logoImg.style.boxSizing = 'border-box';
+              logoImg.onerror = () => promoDiv.removeChild(logoImg);
+              promoDiv.appendChild(logoImg);
           }
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 72px "Montserrat", "Helvetica Neue", sans-serif';
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-          ctx.shadowBlur = 12;
-          ctx.shadowOffsetX = 2;
-          ctx.shadowOffsetY = 2;
-          const words = promoDescription.split(' ');
-          let line = '';
-          const lines: string[] = [];
-          for (let n = 0; n < words.length; n++) {
-              const testLine = line + words[n] + ' ';
-              const metrics = ctx.measureText(testLine);
-              if (metrics.width > 850 && n > 0) { lines.push(line); line = words[n] + ' '; }
-              else { line = testLine; }
-          }
-          lines.push(line);
-          const lineHeight = 90;
-          const startY = (canvas.height - (lines.length - 1) * lineHeight) / 2;
-          for (let i = 0; i < lines.length; i++) {
-              ctx.fillText(lines[i].trim(), canvas.width / 2, startY + i * lineHeight);
-          }
-          if (logoImg) {
-              const logoSize = 150;
-              const pad = 30;
-              ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-              ctx.fillRect(canvas.width - logoSize - pad - 10, canvas.height - logoSize - pad - 10, logoSize + 20, logoSize + 20);
-              ctx.drawImage(logoImg, canvas.width - logoSize - pad, canvas.height - logoSize - pad, logoSize, logoSize);
-          }
-          const finalImageBlob = await new Promise<Blob>((resolve, reject) => {
-              canvas.toBlob(blob => {
-                  if (blob) resolve(blob);
-                  else reject(new Error("Impossibile creare il Blob dall'immagine."));
-              }, 'image/png');
+
+          document.body.appendChild(promoDiv);
+
+          // Converti il div a immagine con html2canvas
+          const canvas = await html2canvas(promoDiv, { scale: 1, useCORS: true, logging: false });
+          document.body.removeChild(promoDiv);
+
+          // Converti canvas a blob
+          const blob = await new Promise<Blob>((resolve, reject) => {
+              canvas.toBlob(b => b ? resolve(b) : reject(new Error("Canvas to blob failed")), 'image/png');
           });
+
+          // Upload su Firebase
           const imageFileName = `promotions/${Date.now()}.png`;
           const imageRef = ref(storage, imageFileName);
-          await uploadBytes(imageRef, finalImageBlob);
+          await uploadBytes(imageRef, blob);
           const downloadURL = await getDownloadURL(imageRef);
           await updateDoc(doc(db, "settings", "appSettings"), {
              activePromotionImageUrl: downloadURL,

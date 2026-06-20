@@ -1125,21 +1125,30 @@ export default function App() {
           // Generazione immagine tramite Pollinations.ai: gratuito, senza chiave API né quota.
           const seed = Date.now() % 1000000;
           const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(backgroundPrompt)}?width=1024&height=1024&nologo=true&model=flux&seed=${seed}`;
+          // Scarico lo sfondo come blob: più robusto del caricamento diretto (niente problemi CORS/canvas, con qualche tentativo per la prima generazione lenta).
+          let bgBlob: Blob | null = null;
+          for (let attempt = 0; attempt < 3 && !bgBlob; attempt++) {
+              try { const r = await fetch(pollinationsUrl); if (r.ok) bgBlob = await r.blob(); } catch (_) { /* riprovo */ }
+              if (!bgBlob) await new Promise(res => setTimeout(res, 2500));
+          }
+          if (!bgBlob) throw new Error("Il servizio di generazione immagini non risponde al momento, riprova tra poco.");
+          const bgObjectUrl = URL.createObjectURL(bgBlob);
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           if (!ctx) throw new Error("Impossibile ottenere il contesto del canvas");
           canvas.width = 1024;
           canvas.height = 1024;
-          const backgroundImg = new Image();
-          backgroundImg.crossOrigin = "Anonymous";
-          const logoImg = new Image();
-          logoImg.crossOrigin = "Anonymous";
           const loadImage = (img: HTMLImageElement, src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
               img.onload = () => resolve(img);
               img.onerror = () => reject(new Error(`Impossibile caricare l'immagine: ${src}`));
               img.src = src;
           });
-          await Promise.all([ loadImage(backgroundImg, pollinationsUrl), loadImage(logoImg, salonLogoUrlFromFirestore) ]);
+          const backgroundImg = new Image();
+          await loadImage(backgroundImg, bgObjectUrl);
+          // Il logo è opzionale: se non si carica (es. CORS Firebase) proseguo senza, l'immagine si crea lo stesso.
+          let logoImg: HTMLImageElement | null = new Image();
+          logoImg.crossOrigin = "Anonymous";
+          try { await loadImage(logoImg, salonLogoUrlFromFirestore); } catch (_) { logoImg = null; }
           ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
@@ -1177,11 +1186,13 @@ export default function App() {
           const logoSize = 120;
           const logoX = canvas.width - logoSize - logoPadding;
           const logoY = logoPadding;
-          ctx.beginPath();
-          ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 5, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-          ctx.fill();
-          ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+          if (logoImg) {
+            ctx.beginPath();
+            ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fill();
+            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+          }
           const finalImageBlob = await new Promise<Blob>((resolve, reject) => {
               canvas.toBlob(blob => {
                   if (blob) resolve(blob);

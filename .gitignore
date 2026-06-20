@@ -24,3 +24,5 @@ yarn-error.log*
 
 /build_new
 /build_old_*
+
+/build_v3

@@ -1122,76 +1122,63 @@ export default function App() {
           } else if (promoSubject === 'scenario') {
             backgroundPrompt = "luxury hairstyle photoshoot couple, upscale interior setting, dramatic lighting, fashion magazine";
           }
-          // Generazione immagine tramite Pollinations.ai: gratuito, senza chiave API né quota.
-          const seed = Date.now() % 1000000;
-          const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(backgroundPrompt)}?width=1024&height=1024&nologo=true&model=flux&seed=${seed}`;
-          // Scarico lo sfondo come blob: più robusto del caricamento diretto (niente problemi CORS/canvas, con qualche tentativo per la prima generazione lenta).
-          let bgBlob: Blob | null = null;
-          for (let attempt = 0; attempt < 3 && !bgBlob; attempt++) {
-              try { const r = await fetch(pollinationsUrl); if (r.ok) bgBlob = await r.blob(); } catch (_) { /* riprovo */ }
-              if (!bgBlob) await new Promise(res => setTimeout(res, 2500));
-          }
-          if (!bgBlob) throw new Error("Il servizio di generazione immagini non risponde al momento, riprova tra poco.");
-          const bgObjectUrl = URL.createObjectURL(bgBlob);
+          // Generazione promo diretta con canvas (niente API esterna, zero blocchi).
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           if (!ctx) throw new Error("Impossibile ottenere il contesto del canvas");
           canvas.width = 1024;
           canvas.height = 1024;
-          const loadImage = (img: HTMLImageElement, src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
-              img.onload = () => resolve(img);
-              img.onerror = () => reject(new Error(`Impossibile caricare l'immagine: ${src}`));
-              img.src = src;
-          });
-          const backgroundImg = new Image();
-          await loadImage(backgroundImg, bgObjectUrl);
-          // Il logo è opzionale: se non si carica (es. CORS Firebase) proseguo senza, l'immagine si crea lo stesso.
-          let logoImg: HTMLImageElement | null = new Image();
-          logoImg.crossOrigin = "Anonymous";
-          try { await loadImage(logoImg, salonLogoUrlFromFirestore); } catch (_) { logoImg = null; }
-          ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+          // Sfondo: gradiente lussuoso (nero→grigio scuro).
+          const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          grad.addColorStop(0, '#1a1a2e');
+          grad.addColorStop(1, '#16213e');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // Accento dorato in alto (per eleganza).
+          ctx.fillStyle = '#d4af37';
+          ctx.fillRect(0, 0, canvas.width, 8);
+          // Carica il logo se disponibile (opzionale).
+          let logoImg: HTMLImageElement | null = null;
+          if (salonLogoUrlFromFirestore) {
+              logoImg = new Image();
+              logoImg.crossOrigin = "Anonymous";
+              try {
+                  await new Promise<void>((resolve, reject) => {
+                      logoImg!.onload = () => resolve();
+                      logoImg!.onerror = () => reject(new Error("Logo non disponibile"));
+                      logoImg!.src = salonLogoUrlFromFirestore;
+                  });
+              } catch (_) { logoImg = null; }
+          }
           ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
+          ctx.textBaseline = 'middle';
           ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 80px "Montserrat", "Helvetica Neue", sans-serif'; 
+          ctx.font = 'bold 72px "Montserrat", "Helvetica Neue", sans-serif';
           ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-          ctx.shadowBlur = 15;
-          ctx.shadowOffsetX = 3;
-          ctx.shadowOffsetY = 3;
-          const wrapText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
-              const words = text.split(' ');
-              let line = '';
-              const lines: string[] = [];
-              for(let n = 0; n < words.length; n++) {
-                  const testLine = line + words[n] + ' ';
-                  const metrics = ctx.measureText(testLine);
-                  if (metrics.width > maxWidth && n > 0) {
-                      lines.push(line);
-                      line = words[n] + ' ';
-                  } else {
-                      line = testLine;
-                  }
-              }
-              lines.push(line);
-              let currentY = y - ((lines.length - 1) * lineHeight);
-              for (let i = 0; i < lines.length; i++) {
-                  ctx.fillText(lines[i].trim(), x, currentY);
-                  currentY += lineHeight;
-              }
-          };
-          const textPaddingBottom = 80;
-          wrapText(promoDescription, canvas.width / 2, canvas.height - textPaddingBottom, canvas.width - 150, 95);
-          ctx.shadowColor = 'transparent';
-          const logoPadding = 40;
-          const logoSize = 120;
-          const logoX = canvas.width - logoSize - logoPadding;
-          const logoY = logoPadding;
+          ctx.shadowBlur = 12;
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 2;
+          const words = promoDescription.split(' ');
+          let line = '';
+          const lines: string[] = [];
+          for (let n = 0; n < words.length; n++) {
+              const testLine = line + words[n] + ' ';
+              const metrics = ctx.measureText(testLine);
+              if (metrics.width > 850 && n > 0) { lines.push(line); line = words[n] + ' '; }
+              else { line = testLine; }
+          }
+          lines.push(line);
+          const lineHeight = 90;
+          const startY = (canvas.height - (lines.length - 1) * lineHeight) / 2;
+          for (let i = 0; i < lines.length; i++) {
+              ctx.fillText(lines[i].trim(), canvas.width / 2, startY + i * lineHeight);
+          }
           if (logoImg) {
-            ctx.beginPath();
-            ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 5, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.fill();
-            ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+              const logoSize = 150;
+              const pad = 30;
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+              ctx.fillRect(canvas.width - logoSize - pad - 10, canvas.height - logoSize - pad - 10, logoSize + 20, logoSize + 20);
+              ctx.drawImage(logoImg, canvas.width - logoSize - pad, canvas.height - logoSize - pad, logoSize, logoSize);
           }
           const finalImageBlob = await new Promise<Blob>((resolve, reject) => {
               canvas.toBlob(blob => {

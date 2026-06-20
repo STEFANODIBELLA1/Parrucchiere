@@ -1114,13 +1114,13 @@ export default function App() {
       try {
           let backgroundPrompt = '';
           if (promoSubject === 'woman') {
-            backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una modella con un taglio di capelli artistico e d'avanguardia, in una posa dinamica e stravagante. Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività dell'hairstyle. L'illuminazione deve essere drammatica, da studio fotografico, per esaltare i dettagli del taglio e i colori. Lo sfondo deve essere pulito e minimale per non distrarre dal soggetto principale. L'immagine non deve contenere testo, loghi o brand.";
+            backgroundPrompt = "luxury hairstyle photoshoot woman, professional haircut, dramatic studio lighting, fashion magazine";
           } else if (promoSubject === 'man') {
-            backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare un modello uomo con un taglio di capelli artistico e d'avanguardia, in una posa dinamica e stravagante. Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività dell'hairstyle. L'illuminazione deve essere drammatica, da studio fotografico, per esaltare i dettagli del taglio e i colori. Lo sfondo deve essere pulito e minimale per non distrarre dal soggetto principale. L'immagine non deve contenere testo, loghi o brand.";
+            backgroundPrompt = "luxury hairstyle photoshoot man, professional haircut, dramatic studio lighting, fashion magazine";
           } else if (promoSubject === 'couple') {
-            backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una coppia (un uomo e una donna) con tagli di capelli artistici e d'avanguardia, in pose dinamiche e stravaganti. Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività degli hairstyle. L'illuminazione deve essere drammatica, da studio fotografico, per esaltare i dettagli dei tagli e i colori. Lo sfondo deve essere pulito e minimale per non distrarre dai soggetti principali. L'immagine non deve contenere testo, loghi o brand.";
+            backgroundPrompt = "luxury hairstyle photoshoot couple, professional haircuts, dramatic studio lighting, fashion magazine";
           } else if (promoSubject === 'scenario') {
-            backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una coppia (un'uomo e una donna) con tagli di capelli artistici e d'avanguardia, immersi in un contesto di sfondo casuale, ma elegante e di lusso (es. un loft urbano, un giardino segreto, una galleria d'arte). Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività degli hairstyle in relazione all'ambiente circostante. L'illuminazione deve essere drammatica per esaltare i dettagli dei tagli e i colori. L'immagine non deve contenere testo, loghi o brand.";
+            backgroundPrompt = "luxury hairstyle photoshoot couple, upscale interior setting, dramatic lighting, fashion magazine";
           }
           // Generazione immagine tramite Pollinations.ai: gratuito, senza chiave API né quota.
           const seed = Date.now() % 1000000;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
+﻿import { useState, useMemo, useEffect, useRef, type CSSProperties } from 'react';
 // Importa i tipi dai nuovi file
 import { type Treatment, type Prize, type Appointment, type ArchivedClosure, type Hairdresser, type ClientProfile } from './utils/types';
 // Importa le costanti dai nuovi file
@@ -8,14 +8,14 @@ import { getWeekNumber, getTodayString, getMonthString } from './utils/helpers';
 
 
 // FIREBASE START
-import { db, storage } from './firebaseConfig';
+import { db, storage } from './utils/firebaseConfig'; // Percorso corretto per firebaseConfig
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 // FIREBASE END
 
 
-// --- STILI (CSS-in-JS con tipi corretti) ---
-const styles: { [key: string]: CSSProperties } = {
+// --- STILI GLOBALI (CSS-in-JS con tipi corretti) ---
+const globalStyles: { [key: string]: CSSProperties } = {
   container: {
     fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     backgroundColor: '#1a1a1a',
@@ -70,7 +70,7 @@ const styles: { [key: string]: CSSProperties } = {
   ctaButtonAlert: {
     backgroundColor: '#d9534f',
     color: '#fff',
-    animation: 'pulse 1.5s infinite',
+    animation: 'pulse 1.s infinite',
   },
   aiButton: {
     backgroundColor: 'transparent',
@@ -559,13 +559,12 @@ const styles: { [key: string]: CSSProperties } = {
 
 // --- Componenti UI (Questi verranno spostati in futuro) ---
 
-// AlertDialog Component for custom modals
 const AlertDialog = ({ title, message, onClose }: { title: string; message: string; onClose: () => void }) => (
-  <div style={styles.modalOverlay}>
-    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-      <h2 style={styles.modalTitle}>{title}</h2>
-      <p style={styles.modalMessage}>{message}</p>
-      <button style={styles.modalButton} onClick={onClose}>
+  <div style={globalStyles.modalOverlay}>
+    <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <h2 style={globalStyles.modalTitle}>{title}</h2>
+      <p style={globalStyles.modalMessage}>{message}</p>
+      <button style={globalStyles.modalButton} onClick={onClose}>
         OK
       </button>
     </div>
@@ -573,21 +572,21 @@ const AlertDialog = ({ title, message, onClose }: { title: string; message: stri
 );
 
 const TreatmentItem = ({ item, onSelect, isSelected, onInfoClick }: {item: Treatment, onSelect: (item: Treatment) => void, isSelected: boolean, onInfoClick: (item: Treatment) => void}) => (
-  <div style={{...styles.treatmentItem, ...(isSelected && styles.treatmentItemSelected)}}>
-    <div style={styles.treatmentContent} onClick={() => onSelect(item)}>
-      <p style={{...styles.treatmentName, ...(isSelected && styles.treatmentNameSelected)}}>{item.name}</p>
-      <p style={{...styles.treatmentDuration, ...(isSelected && styles.treatmentDurationSelected)}}>{item.duration} min</p>
+  <div style={{...globalStyles.treatmentItem, ...(isSelected && globalStyles.treatmentItemSelected)}}>
+    <div style={globalStyles.treatmentContent} onClick={() => onSelect(item)}>
+      <p style={{...globalStyles.treatmentName, ...(isSelected && globalStyles.treatmentNameSelected)}}>{item.name}</p>
+      <p style={{...globalStyles.treatmentDuration, ...(isSelected && globalStyles.treatmentDurationSelected)}}>{item.duration} min</p>
     </div>
-    <span style={styles.treatmentInfoIcon} onClick={() => onInfoClick(item)}>✨</span>
+    <span style={globalStyles.treatmentInfoIcon} onClick={() => onInfoClick(item)}>✨</span>
   </div>
 );
 
 const TimeSlot = ({ time, onSelect, isSelected, isBooked }: {time: string, onSelect: (time: string) => void, isSelected: boolean, isBooked: boolean }) => (
     <button
         style={{
-            ...styles.slotItem,
-            ...(isSelected && styles.slotItemSelected),
-            ...(isBooked && styles.slotItemBooked)
+            ...globalStyles.slotItem,
+            ...(isSelected && globalStyles.slotItemSelected),
+            ...(isBooked && globalStyles.slotItemBooked)
         }}
         onClick={() => !isBooked && onSelect(time)}
         disabled={isBooked}
@@ -629,10 +628,10 @@ const Calendar = ({ selectedDate, onDateSelect }: {selectedDate: string, onDateS
                 <div 
                     key={dateString}
                     style={{
-                        ...styles.calendarDay,
-                        ...(isOtherMonth && styles.calendarDayOtherMonth),
-                        ...(isSelected && styles.calendarDaySelected),
-                        ...(isPast && styles.calendarDayPast),
+                        ...globalStyles.calendarDay,
+                        ...(isOtherMonth && globalStyles.calendarDayOtherMonth),
+                        ...(isSelected && globalStyles.calendarDaySelected),
+                        ...(isPast && globalStyles.calendarDayPast),
                     }}
                     onClick={() => !isPast && onDateSelect(dateString)}
                 >
@@ -644,16 +643,16 @@ const Calendar = ({ selectedDate, onDateSelect }: {selectedDate: string, onDateS
     };
     
     return (
-        <div style={styles.calendarContainer}>
-            <div style={styles.calendarHeader}>
-                <button onClick={() => changeMonth(-1)} style={styles.calendarNavButton}>‹</button>
-                <span style={styles.calendarMonthLabel}>
+        <div style={globalStyles.calendarContainer}>
+            <div style={globalStyles.calendarHeader}>
+                <button onClick={() => changeMonth(-1)} style={globalStyles.calendarNavButton}>‹</button>
+                <span style={globalStyles.calendarMonthLabel}>
                     {currentMonth.toLocaleString('it-IT', { month: 'long', year: 'numeric' })}
                 </span>
-                <button onClick={() => changeMonth(1)} style={styles.calendarNavButton}>›</button>
+                <button onClick={() => changeMonth(1)} style={globalStyles.calendarNavButton}>›</button>
             </div>
-            <div style={styles.calendarGrid}>
-                {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => <div key={day} style={styles.calendarDayLabel}>{day}</div>)}
+            <div style={globalStyles.calendarGrid}>
+                {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => <div key={day} style={globalStyles.calendarDayLabel}>{day}</div>)}
                 {renderDays()}
             </div>
         </div>
@@ -664,31 +663,25 @@ const Calendar = ({ selectedDate, onDateSelect }: {selectedDate: string, onDateS
 // --- Schermata Principale dell'App ---
 export default function App() {
   const [screen, setScreen] = useState('home');
-  // FIREBASE START - Inizializza con array vuoti, i dati verranno caricati da Firestore
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [archivedClosures, setArchivedClosures] = useState<ArchivedClosure[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [hairdressers, setHairdressers] = useState<Hairdresser[]>([]);
   const [clientProfiles, setClientProfiles] = useState<ClientProfile[]>([]);
-  // FIREBASE END
 
   const [isConfModalVisible, setConfModalVisible] = useState(false);
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [lastBookingId, setLastBookingId] = useState<string | null>(null);
   
-  // FIREBASE STORAGE START - activePromotionImage verrà caricato da Firestore (il cui URL proviene da Storage)
   const [activePromotionImage, setActivePromotionImage] = useState<string | null>(null);
-  // Nuovo: URL del logo del salone, caricato da Firestore
   const [salonLogoUrlFromFirestore, setSalonLogoUrlFromFirestore] = useState<string>(SALON_INFO.logoUrl);
-  // FIREBASE STORAGE END
   const [isSplashVisible, setIsSplashVisible] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [selectedTreatments, setSelectedTreatments] = useState<Treatment[]>([]);
   const [clientName, setClientName] = useState('');
-  // Nuovo: Stato per il numero di telefono del cliente
   const [clientPhone, setClientPhone] = useState('');
   const [selectedHairdresserId, setSelectedHairdresserId] = useState<string>('');
   
@@ -712,11 +705,14 @@ export default function App() {
   const [keySequence, setKeySequence] = useState<string[]>([]);
   const [logoTapCount, setLogoTapCount] = useState(0);
 
-  // FIREBASE START - commissionThreshold e hairdresserPassword verranno gestiti su Firestore
   const [commissionThreshold, setCommissionThreshold] = useState(10.00);
   const [settingsPassword, setSettingsPassword] = useState('');
   const [areSettingsUnlocked, setAreSettingsUnlocked] = useState(false);
   const [tempThreshold, setTempThreshold] = useState(commissionThreshold.toString());
+
+  const [temporaryUnlockThreshold, setTemporaryUnlockThreshold] = useState<number | null>(null);
+  const [tempUnlockThresholdInput, setTempUnlockThresholdInput] = useState('');
+
 
   const [commissionFee, setCommissionFee] = useState(COMMISSION_FEE);
   const [tempCommissionFee, setTempCommissionFee] = useState(COMMISSION_FEE.toString());
@@ -740,28 +736,23 @@ export default function App() {
   const [isGeneratingPromo, setIsGeneratingPromo] = useState(false);
 
   const [hairdresserPassword, setHairdresserPassword] = useState('parola');
-  const [isHairdresserLoginModalVisible, setHairdresserLoginModalModalVisible] = useState(false);
+  const [isHairdresserLoginModalVisible, setHairdresserLoginModalVisible] = useState(false);
   const [hairdresserPasswordInput, setHairdresserPasswordInput] = useState('');
   const [tempHairdresserPassword, setTempHairdresserPassword] = useState(hairdresserPassword);
 
-  // Nuovi stati per le informazioni del salone modificabili
   const [salonNameFromFirestore, setSalonNameFromFirestore] = useState(SALON_INFO.name);
   const [salonAddressFromFirestore, setSalonAddressFromFirestore] = useState(SALON_INFO.address);
   const [salonPhoneFromFirestore, setSalonPhoneFromFirestore] = useState(SALON_INFO.phone);
-  // Stati temporanei per i campi di input nel Super Admin
   const [tempSalonName, setTempSalonName] = useState(SALON_INFO.name);
   const [tempSalonAddress, setTempSalonAddress] = useState(SALON_INFO.address);
   const [tempSalonPhone, setTempSalonPhone] = useState(SALON_INFO.phone);
   const [tempLogoFile, setTempLogoFile] = useState<File | null>(null);
 
   const [isPaymentSetupModalVisible, setIsPaymentSetupModalVisible] = useState(false);
-  const [selectedHairdresserForPayment, setSelectedHairdresserForPayment] = useState<Hairdresser | null>(null);
-
-  // FIREBASE END
-
+  const [salonStripeCustomerId, setSalonStripeCustomerId] = useState<string | null>(null);
+  
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
 
-  // State for custom alert dialog
   const [alertDialog, setAlertDialog] = useState<{ visible: boolean; title: string; message: string }>({
     visible: false,
     title: '',
@@ -776,22 +767,35 @@ export default function App() {
     setAlertDialog({ ...alertDialog, visible: false });
   };
 
-
   const closureRequired = useMemo(() => {
-    const totalAppointmentsDue = appointments.length * commissionFee;
-    const totalPromotionsDue = promotionsGeneratedCount * promotionGenerationFee;
-    return (totalAppointmentsDue + totalPromotionsDue) >= commissionThreshold;
-  }, [appointments, commissionThreshold, promotionsGeneratedCount, promotionGenerationFee, commissionFee]);
+    const totalDue = (appointments.length * commissionFee) + (promotionsGeneratedCount * promotionGenerationFee);
+
+    const isAutoPaymentLocked = salonStripeCustomerId && totalDue >= autoPaymentThreshold;
+
+    const manualThreshold = temporaryUnlockThreshold || commissionThreshold;
+    const isManualPaymentLocked = !salonStripeCustomerId && totalDue >= manualThreshold;
+
+    return isAutoPaymentLocked || isManualPaymentLocked;
+  }, [
+      appointments, 
+      commissionFee, 
+      promotionsGeneratedCount, 
+      promotionGenerationFee, 
+      commissionThreshold, 
+      temporaryUnlockThreshold,
+      autoPaymentThreshold,
+      salonStripeCustomerId
+  ]);
   
   useEffect(() => {
     if(closureRequired) {
       setIsAppLocked(true);
+    } else {
+      setIsAppLocked(false);
     }
   }, [closureRequired]);
 
-  // FIREBASE START - Caricamento iniziale dei dati da Firestore (incluso URL immagine da Storage)
   useEffect(() => {
-    // Carica appuntamenti
     const unsubscribeAppointments = onSnapshot(collection(db, "appointments"), (snapshot) => {
       const fetchedAppointments: Appointment[] = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -803,7 +807,6 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare gli appuntamenti.");
     });
 
-    // Carica archivio chiusure
     const unsubscribeClosures = onSnapshot(collection(db, "archivedClosures"), (snapshot) => {
       const fetchedClosures: ArchivedClosure[] = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -815,16 +818,14 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare l'archivio chiusure.");
     });
 
-    // Carica trattamenti
     const unsubscribeTreatments = onSnapshot(collection(db, "treatments"), (snapshot) => {
       const fetchedTreatments: Treatment[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Treatment[];
-      // Popola con dati iniziali se non ci sono trattamenti
       if (fetchedTreatments.length === 0) {
         INITIAL_TREATMENTS.forEach(t => addDoc(collection(db, "treatments"), t));
-        setTreatments(INITIAL_TREATMENTS); // Imposta subito per evitare delay
+        setTreatments(INITIAL_TREATMENTS);
       } else {
         setTreatments(fetchedTreatments);
       }
@@ -833,16 +834,14 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare i trattamenti.");
     });
 
-    // Carica premi
     const unsubscribePrizes = onSnapshot(collection(db, "prizes"), (snapshot) => {
       const fetchedPrizes: Prize[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Prize[];
-       // Popola con dati iniziali se non ci sono premi
       if (fetchedPrizes.length === 0) {
         INITIAL_PRIZES.forEach(p => addDoc(collection(db, "prizes"), p));
-        setPrizes(INITIAL_PRIZES); // Imposta subito per evitare delay
+        setPrizes(INITIAL_PRIZES);
       } else {
         setPrizes(fetchedPrizes);
       }
@@ -850,19 +849,18 @@ export default function App() {
       console.error("Errore nel caricamento premi:", error);
       showAlert("Errore", "Impossibile caricare i premi.");
     });
-
-    // Nuovo: Carica parrucchieri
+    
     const unsubscribeHairdressers = onSnapshot(collection(db, "hairdressers"), (snapshot) => {
-      const fetchedHairdressers: Hairdresser[] = snapshot.docs.map(doc => ({
-        // Assicurati che i dati del documento vengano prima, poi i valori di default
-        ...doc.data(),
-        id: doc.id,
-        // Fornisci valori di default per le nuove proprietà se mancanti nel DB esistente
-        workingHours: doc.data().workingHours || { monday: { start: '09:00', end: '18:00' }, tuesday: { start: '09:00', end: '18:00' }, wednesday: { start: '09:00', end: '18:00' }, thursday: { start: '09:00', end: '18:00' }, friday: { start: '09:00', end: '18:00' }, saturday: { start: '09:00', end: '13:00' }, sunday: null },
-        absentDates: doc.data().absentDates || [],
-        stripeCustomerId: doc.data().stripeCustomerId || undefined,
-      })) as Hairdresser[];
-      if (fetchedHairdressers.length === 0) {
+      const fetchedHairdressers: Hairdresser[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            name: data.name || 'Nome non disponibile',
+            workingHours: data.workingHours || { monday: { start: '09:00', end: '18:00' }, tuesday: { start: '09:00', end: '18:00' }, wednesday: { start: '09:00', end: '18:00' }, thursday: { start: '09:00', end: '18:00' }, friday: { start: '09:00', end: '18:00' }, saturday: { start: '09:00', end: '13:00' }, sunday: null },
+            absentDates: data.absentDates || [],
+        };
+      });
+      if (fetchedHairdressers.length === 0 && hairdressers.length === 0) {
         INITIAL_HAIRDRESSERS.forEach(hd => addDoc(collection(db, "hairdressers"), hd));
         setHairdressers(INITIAL_HAIRDRESSERS);
       } else {
@@ -873,7 +871,6 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare i parrucchieri.");
     });
 
-    // Nuovo: Carica profili cliente
     const unsubscribeClientProfiles = onSnapshot(collection(db, "clientProfiles"), (snapshot) => {
       const fetchedProfiles: ClientProfile[] = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -885,8 +882,6 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare i profili cliente.");
     });
 
-
-    // Carica impostazioni globali (soglia commissione, password parrucchiere, immagine promozionale URL, info salone)
     const unsubscribeSettings = onSnapshot(doc(db, "settings", "appSettings"), (docSnap) => {
       if (docSnap.exists()) {
         const settingsData = docSnap.data();
@@ -894,9 +889,7 @@ export default function App() {
         setTempThreshold((settingsData.commissionThreshold || 10.00).toString());
         setHairdresserPassword(settingsData.hairdresserPassword || 'parola');
         setTempHairdresserPassword(settingsData.hairdresserPassword || 'parola');
-        // Firebase Storage: Carica l'URL dell'immagine da Firestore
         setActivePromotionImage(settingsData.activePromotionImageUrl || null);
-        // Nuovo: Carica info salone da Firestore
         setSalonNameFromFirestore(settingsData.salonName || SALON_INFO.name);
         setTempSalonName(settingsData.salonName || SALON_INFO.name);
         setSalonAddressFromFirestore(settingsData.salonAddress || SALON_INFO.address);
@@ -911,14 +904,14 @@ export default function App() {
         setTempCommissionFee((settingsData.commissionFee || COMMISSION_FEE).toString());
         setAutoPaymentThreshold(settingsData.autoPaymentThreshold || 50.00);
         setTempAutoPaymentThreshold((settingsData.autoPaymentThreshold || 50.00).toString());
+        setSalonStripeCustomerId(settingsData.salonStripeCustomerId || null);
+        setTemporaryUnlockThreshold(settingsData.temporaryUnlockThreshold || null);
 
       } else {
-        // Se le impostazioni non esistono, creale con valori di default
         setDoc(doc(db, "settings", "appSettings"), {
           commissionThreshold: 10.00,
           hairdresserPassword: 'parola',
           activePromotionImageUrl: null,
-          // Nuovo: Inizializza info salone con valori di default
           salonName: SALON_INFO.name,
           salonAddress: SALON_INFO.address,
           salonPhone: SALON_INFO.phone,
@@ -927,6 +920,8 @@ export default function App() {
           promotionsGeneratedCount: 0,
           commissionFee: COMMISSION_FEE,
           autoPaymentThreshold: 50.00,
+          salonStripeCustomerId: null,
+          temporaryUnlockThreshold: null,
         });
       }
     }, (error) => {
@@ -934,7 +929,6 @@ export default function App() {
       showAlert("Errore", "Impossibile caricare le impostazioni.");
     });
 
-    // Cleanup listeners on component unmount
     return () => {
       unsubscribeAppointments();
       unsubscribeClosures();
@@ -959,7 +953,6 @@ export default function App() {
   }, [activePromotionImage]);
 
 
-  // Key sequence listener for Super Admin panel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
         setKeySequence(prev => [...prev, e.key].slice(-SUPER_ADMIN_SEQUENCE.length));
@@ -982,7 +975,6 @@ export default function App() {
           setSuperAdminVisible(true);
           setLogoTapCount(0);
       }
-      // Reset tap count if not enough taps within 2 seconds
       setTimeout(() => {
           if (logoTapCount > 0 && newCount < 7) {
               setLogoTapCount(0);
@@ -992,42 +984,38 @@ export default function App() {
 
   const totalCost = useMemo(() => selectedTreatments.reduce((sum, t) => sum + t.price, 0), [selectedTreatments]);
 
-  // Nuovo: Funzione per ottenere gli slot disponibili per un parrucchiere in una data specifica
   const getHairdresserAvailableSlots = (dateString: string, hdId: string): string[] => {
     const selectedDay = new Date(dateString + 'T00:00:00');
     const dayOfWeek = selectedDay.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-
     const hairdresser = hairdressers.find(hd => hd.id === hdId);
     if (!hairdresser) return [];
-
-    // Controlla se il parrucchiere è assente in quella data
-    if (hairdresser.absentDates.includes(dateString)) {
-      return [];
-    }
-
+    if (hairdresser.absentDates.includes(dateString)) return [];
     const dailyHours = hairdresser.workingHours[dayOfWeek];
-
-    if (!dailyHours) { // Giorno di riposo
-      return [];
-    }
-
+    if (!dailyHours) return [];
     const [startHour, startMinute] = dailyHours.start.split(':').map(Number);
     const [endHour, endMinute] = dailyHours.end.split(':').map(Number);
-
     const slots: string[] = [];
     const currentTime = new Date(selectedDay);
     currentTime.setHours(startHour, startMinute, 0, 0);
-
     const endTime = new Date(selectedDay);
     endTime.setHours(endHour, endMinute, 0, 0);
-
+    const now = new Date();
+    if (selectedDay.toDateString() === now.toDateString()) {
+        if (currentTime.getHours() < now.getHours() || (currentTime.getHours() === now.getHours() && currentTime.getMinutes() < now.getMinutes())) {
+            if (now.getMinutes() > 30) {
+              currentTime.setHours(now.getHours() + 1, 0, 0, 0);
+            } else {
+              currentTime.setMinutes(30, 0, 0);
+            }
+        }
+    } else if (selectedDay < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        return [];
+    }
     while (currentTime.getTime() < endTime.getTime()) {
       const slot = currentTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
       slots.push(slot);
       currentTime.setMinutes(currentTime.getMinutes() + 30);
     }
-
-    // Filtra gli slot già prenotati per quella data e quel parrucchiere
     return slots.filter(slot => !appointments.some(app =>
       app.date === dateString && 
       app.time === slot && 
@@ -1035,25 +1023,13 @@ export default function App() {
     ));
   };
 
-
-  // FIREBASE START - Funzione handleBooking modificata per Firestore
   const handleBooking = async () => {
-    if (!clientName.trim()) {
-        showAlert("Errore di input", "Per favore, inserisci il tuo nome.");
-        return;
+    if (!clientName.trim() || !clientPhone.trim() || !selectedHairdresserId || selectedTreatments.length === 0 || !selectedSlot || !selectedDate) {
+      showAlert("Dati Mancanti", "Per favore, compila tutti i campi prima di confermare.");
+      return;
     }
-    if (!clientPhone.trim()) {
-        showAlert("Errore di input", "Per favor, inserisci il tuo numero di telefono.");
-        return;
-    }
-    if (!selectedHairdresserId) {
-        showAlert("Errore di input", "Per favore, scegli un parrucchiere.");
-        return;
-    }
-    
     try {
-        const newBooking: Appointment = {
-            id: '',
+        const newBookingData = {
             clientName: clientName,
             clientPhone: clientPhone,
             date: selectedDate,
@@ -1063,10 +1039,7 @@ export default function App() {
             prize: '',
             hairdresserId: selectedHairdresserId,
         };
-
-        // Trova o crea il profilo del cliente per aggiornare i punti
         let clientProfile = clientProfiles.find(profile => profile.phone === clientPhone);
-
         if (!clientProfile) {
             const clientProfileRef = await addDoc(collection(db, "clientProfiles"), {
                 name: clientName,
@@ -1074,23 +1047,13 @@ export default function App() {
                 loyaltyPoints: 0,
             });
             clientProfile = { id: clientProfileRef.id, name: clientName, phone: clientPhone, loyaltyPoints: 0 };
-            setClientProfiles(prev => [...prev, clientProfile as ClientProfile]);
         }
-
-        // Calcola i punti guadagnati
-        const pointsEarned = newBooking.total * LOYALTY_SETTINGS.pointsPerEuro;
-
-        // Aggiorna i punti del cliente in Firestore
+        const pointsEarned = newBookingData.total * LOYALTY_SETTINGS.pointsPerEuro;
         const updatedPoints = clientProfile.loyaltyPoints + pointsEarned;
         await updateDoc(doc(db, "clientProfiles", clientProfile.id), { loyaltyPoints: updatedPoints });
-
-        // Collega l'appuntamento al profilo cliente
-        newBooking.clientId = clientProfile.id;
         
-        const docRef = await addDoc(collection(db, "appointments"), newBooking);
+        const docRef = await addDoc(collection(db, "appointments"), { ...newBookingData, clientId: clientProfile.id });
         setLastBookingId(docRef.id);
-
-        setAppointments(prev => [...prev, { ...newBooking, id: docRef.id }]);
         
         setSelectedDate('');
         setSelectedSlot('');
@@ -1104,43 +1067,33 @@ export default function App() {
         showAlert("Errore", "Impossibile completare la prenotazione. Riprova.");
     }
   };
-  // FIREBASE END
   
   const handleCloseConfirmationModal = () => {
     setConfModalVisible(false);
     setGameModalVisible(true);
   };
 
-  // FIREBASE START - Funzione handleGameEnd modificata per Firestore
   const handleGameEnd = async (prizeWon: Prize | null) => {
-    if (lastBookingId) {
+    if (lastBookingId && prizeWon) {
       try {
-        const appointmentRef = doc(db, "appointments", lastBookingId);
-        await updateDoc(appointmentRef, { prize: prizeWon ? prizeWon.text : '' });
-
-        if (prizeWon) {
-          const prizeRef = doc(db, "prizes", prizeWon.id);
-          const prizeDocSnap = await getDoc(prizeRef);
-          if (prizeDocSnap.exists()) {
-              const currentPrizeDocData = prizeDocSnap.data() as Prize;
-              const today = getTodayString();
-              const week = getWeekNumber(new Date());
-              const month = getMonthString(new Date());
-
-              const dailyCount = currentPrizeDocData.dispensed.daily?.date === today ? (currentPrizeDocData.dispensed.daily.count || 0) : 0;
-              const weeklyCount = currentPrizeDocData.dispensed.weekly?.week === week ? (currentPrizeDocData.dispensed.weekly.count || 0) : 0;
-              const monthlyCount = currentPrizeDocData.dispensed.monthly?.month === month ? (currentPrizeDocData.dispensed.monthly.count || 0) : 0;
-
-              await updateDoc(prizeRef, {
-                dispensed: {
-                  daily: { count: dailyCount + 1, date: today },
-                  weekly: { count: weeklyCount + 1, week: week },
-                  monthly: { count: monthlyCount + 1, month: month }
-                }
-              });
-          } else {
-              console.warn(`Tentativo di aggiornare un premio non esistente: ${prizeWon.id}`);
-          }
+        await updateDoc(doc(db, "appointments", lastBookingId), { prize: prizeWon.text });
+        const prizeRef = doc(db, "prizes", prizeWon.id);
+        const prizeDocSnap = await getDoc(prizeRef);
+        if (prizeDocSnap.exists()) {
+            const currentPrizeDocData = prizeDocSnap.data() as Prize;
+            const today = getTodayString();
+            const week = getWeekNumber(new Date());
+            const month = getMonthString(new Date());
+            const dailyCount = currentPrizeDocData.dispensed.daily?.date === today ? (currentPrizeDocData.dispensed.daily.count || 0) : 0;
+            const weeklyCount = currentPrizeDocData.dispensed.weekly?.week === week ? (currentPrizeDocData.dispensed.weekly.count || 0) : 0;
+            const monthlyCount = currentPrizeDocData.dispensed.monthly?.month === month ? (currentPrizeDocData.dispensed.monthly.count || 0) : 0;
+            await updateDoc(prizeRef, {
+              dispensed: {
+                daily: { count: dailyCount + 1, date: today },
+                weekly: { count: weeklyCount + 1, week: week },
+                monthly: { count: monthlyCount + 1, month: month }
+              }
+            });
         }
       } catch (error: any) {
         console.error("Errore durante l'aggiornamento del premio:", error);
@@ -1150,27 +1103,14 @@ export default function App() {
     setLastBookingId(null);
     setGameModalVisible(false);
     setScreen('home');
-    if (closureRequired) {
-      showAlert("APP BLOCCATA", "ATTENZIONE: L'app è bloccata. È necessario saldare il conto nell'Area Riservata per continuare a ricevere prenotazioni.");
-      setScreen('admin');
-    }
   }
-  // FIREBASE END
 
-  // FIREBASE STORAGE START - Funzione generatePromoImage per Firebase Storage
   const generatePromoImage = async () => {
-      if (!promoDescription.trim()) {
-          showAlert("Input Richiesto", "Inserisci una descrizione per la promozione.");
+      if (!promoDescription.trim() || !promoSubject) {
+          showAlert("Dati Mancanti", "Inserisci una descrizione e seleziona un soggetto per la promozione.");
           return;
       }
-      if (!promoSubject) {
-          showAlert("Soggetto Richiesto", "Seleziona se il soggetto della promozione è 'Donna', 'Uomo', 'Coppia' o 'Scenario'.");
-          return;
-      }
-
       setIsGeneratingPromo(true);
-      setActivePromotionImage(null);
-
       try {
           let backgroundPrompt = '';
           if (promoSubject === 'woman') {
@@ -1182,46 +1122,30 @@ export default function App() {
           } else if (promoSubject === 'scenario') {
             backgroundPrompt = "Crea un'immagine fotografica di alta moda per una campagna pubblicitaria di un parrucchiere. L'immagine deve presentare una coppia (un'uomo e una donna) con tagli di capelli artistici e d'avanguardia, immersi in un contesto di sfondo casuale, ma elegante e di lusso (es. un loft urbano, un giardino segreto, una galleria d'arte). Lo stile deve essere audace, moderno e di lusso. Concentrati sull'espressione artistica e sulla creatività degli hairstyle in relazione all'ambiente circostante. L'illuminazione deve essere drammatica per esaltare i dettagli dei tagli e i colori. L'immagine non deve contenere testo, loghi o brand.";
           }
-          
           const payload = { instances: [{ prompt: backgroundPrompt }], parameters: { "sampleCount": 1} };
-          const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-          
-          const response = await fetch(apiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-          });
+          const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+          const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const result = await response.json();
-
           if (!result.predictions || result.predictions.length === 0 || !result.predictions[0].bytesBase64Encoded) {
               throw new Error("La generazione dello sfondo AI è fallita.");
           }
           const backgroundBase64 = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           if (!ctx) throw new Error("Impossibile ottenere il contesto del canvas");
           canvas.width = 1024;
           canvas.height = 1024;
-
           const backgroundImg = new Image();
           const logoImg = new Image();
           logoImg.crossOrigin = "Anonymous";
-
           const loadImage = (img: HTMLImageElement, src: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
               img.onload = () => resolve(img);
               img.onerror = () => reject(new Error(`Impossibile caricare l'immagine: ${src}`));
               img.src = src;
           });
-
-          await Promise.all([
-              loadImage(backgroundImg, backgroundBase64),
-              loadImage(logoImg, salonLogoUrlFromFirestore)
-          ]);
-          
+          await Promise.all([ loadImage(backgroundImg, backgroundBase64), loadImage(logoImg, salonLogoUrlFromFirestore) ]);
           ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
-          
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
           ctx.fillStyle = '#FFFFFF';
@@ -1230,7 +1154,6 @@ export default function App() {
           ctx.shadowBlur = 15;
           ctx.shadowOffsetX = 3;
           ctx.shadowOffsetY = 3;
-
           const wrapText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
               const words = text.split(' ');
               let line = '';
@@ -1246,82 +1169,60 @@ export default function App() {
                   }
               }
               lines.push(line);
-              
               let currentY = y - ((lines.length - 1) * lineHeight);
               for (let i = 0; i < lines.length; i++) {
                   ctx.fillText(lines[i].trim(), x, currentY);
                   currentY += lineHeight;
               }
           };
-
           const textPaddingBottom = 80;
           wrapText(promoDescription, canvas.width / 2, canvas.height - textPaddingBottom, canvas.width - 150, 95);
-          
           ctx.shadowColor = 'transparent';
-
           const logoPadding = 40;
           const logoSize = 120;
           const logoX = canvas.width - logoSize - logoPadding;
           const logoY = logoPadding;
-          
           ctx.beginPath();
           ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2 + 5, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
           ctx.fill();
-          
           ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
-
-          // Ottieni il Blob dall'immagine finale del canvas per caricarlo su Firebase Storage
           const finalImageBlob = await new Promise<Blob>((resolve, reject) => {
               canvas.toBlob(blob => {
                   if (blob) resolve(blob);
-                  else reject(new Error("Impossibile creare il Blob dall'immagine per Firebase Storage."));
+                  else reject(new Error("Impossibile creare il Blob dall'immagine."));
               }, 'image/png');
           });
-
-          // FIREBASE STORAGE START: Caricamento su Firebase Storage
           const imageFileName = `promotions/${Date.now()}.png`;
           const imageRef = ref(storage, imageFileName);
           await uploadBytes(imageRef, finalImageBlob);
           const downloadURL = await getDownloadURL(imageRef);
-          // FIREBASE STORAGE END
-
-          setActivePromotionImage(downloadURL);
-          // FIREBASE: Salva l'URL dell'immagine in Firestore (associato alle impostazioni dell'app)
           await updateDoc(doc(db, "settings", "appSettings"), {
              activePromotionImageUrl: downloadURL,
              promotionsGeneratedCount: promotionsGeneratedCount + 1,
           });
-
-          showAlert("Successo", "Immagine promozionale creata e impostata come splash screen!");
-
+          showAlert("Successo", "Immagine promozionale creata e impostata!");
       } catch (error: any) {
           console.error("Errore generazione immagine promo:", error);
-          const errorMessage = error.message || "Errore sconosciuto";
-          showAlert("Errore AI", `Errore durante la creazione dell'immagine promozionale: ${errorMessage}`);
+          showAlert("Errore AI", `Errore durante la creazione dell'immagine: ${error.message || "Errore sconosciuto"}`);
       } finally {
           setIsGeneratingPromo(false);
       }
   };
 
-  // FIREBASE STORAGE START: Funzione removePromotionImage per Firebase Storage
   const removePromotionImage = async () => {
     if (!activePromotionImage) return;
     try {
       const imageToDeleteRef = ref(storage, activePromotionImage);
       await deleteObject(imageToDeleteRef);
-
       await updateDoc(doc(db, "settings", "appSettings"), { activePromotionImageUrl: null });
-      setActivePromotionImage(null);
       showAlert("Successo", "Immagine promozionale rimossa!");
     } catch (error: any) {
-      console.error("Errore durante la rimozione dell'immagine promozionale:", error);
-      showAlert("Errore", `Impossibile rimuovere l'immagine promozionale: ${error.message || 'Errore sconosciuto'}`);
+      console.error("Errore rimozione immagine:", error);
+      showAlert("Errore", `Impossibile rimuovere l'immagine: ${error.message || 'Errore sconosciuto'}`);
     }
   }
-  // FIREBASE STORAGE END
 
-  // Nuovo: Funzione per salvare le informazioni del salone
   const handleSaveSalonInfo = async () => {
     if (!tempSalonName.trim() || !tempSalonAddress.trim() || !tempSalonPhone.trim()) {
       showAlert("Campi Mancanti", "Compila tutti i campi delle informazioni del salone.");
@@ -1333,17 +1234,13 @@ export default function App() {
         salonAddress: tempSalonAddress,
         salonPhone: tempSalonPhone,
       });
-      setSalonNameFromFirestore(tempSalonName);
-      setSalonAddressFromFirestore(tempSalonAddress);
-      setSalonPhoneFromFirestore(tempSalonPhone);
       showAlert("Successo", "Informazioni salone aggiornate!");
     } catch (error: any) {
-      console.error("Errore nel salvataggio info salone:", error);
-      showAlert("Errore", `Impossibile salvare le informazioni del salone: ${error.message || 'Errore sconosciuto'}`);
+      console.error("Errore salvataggio info salone:", error);
+      showAlert("Errore", `Impossibile salvare le informazioni: ${error.message || 'Errore sconosciuto'}`);
     }
   };
 
-  // Nuovo: Funzione per caricare il logo
   const handleLogoUpload = async () => {
     if (!tempLogoFile) {
       showAlert("File Mancante", "Seleziona un file immagine da caricare.");
@@ -1354,70 +1251,54 @@ export default function App() {
       const logoRef = ref(storage, logoFileName);
       await uploadBytes(logoRef, tempLogoFile);
       const downloadURL = await getDownloadURL(logoRef);
-
       if (salonLogoUrlFromFirestore && salonLogoUrlFromFirestore !== SALON_INFO.logoUrl) {
         try {
           const oldPath = new URL(salonLogoUrlFromFirestore).pathname.split('/o/')[1].split('?')[0];
           const decodedOldPath = decodeURIComponent(oldPath);
           await deleteObject(ref(storage, decodedOldPath));
         } catch (deleteError) {
-          console.warn("Errore durante l'eliminazione del vecchio logo:", deleteError);
+          console.warn("Errore eliminazione vecchio logo:", deleteError);
         }
       }
-
       await updateDoc(doc(db, "settings", "appSettings"), { salonLogoUrl: downloadURL });
-      setSalonLogoUrlFromFirestore(downloadURL);
       setTempLogoFile(null);
       showAlert("Successo", "Logo caricato e aggiornato!");
     } catch (error: any) {
-      console.error("Errore nel caricamento logo:", error);
+      console.error("Errore caricamento logo:", error);
       showAlert("Errore", `Impossibile caricare il logo: ${error.message || 'Errore sconosciuto'}`);
     }
   };
 
-
-  // FIREBASE START - Funzione handleAccountingClosure modificata per Firestore
   const handleAccountingClosure = async () => {
     const totalAppointmentsDue = appointments.length * commissionFee;
     const totalPromotionsDue = promotionsGeneratedCount * promotionGenerationFee;
     const totalDue = totalAppointmentsDue + totalPromotionsDue;
-
-    const newClosure: ArchivedClosure = {
-        id: '',
+    const newClosure: Omit<ArchivedClosure, 'id'> = {
         date: new Date().toISOString(),
         appointmentCount: appointments.length,
         amountPaid: totalDue,
         appointments: [...appointments],
         promotionGenerationCost: totalPromotionsDue,
     };
-
     try {
         await addDoc(collection(db, "archivedClosures"), newClosure);
-        
-        const q = collection(db, "appointments");
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(collection(db, "appointments"));
         const deletePromises = querySnapshot.docs.map(d => deleteDoc(doc(db, "appointments", d.id)));
         await Promise.all(deletePromises);
-
-        await updateDoc(doc(db, "settings", "appSettings"), { promotionsGeneratedCount: 0 });
-        setPromotionsGeneratedCount(0);
-
-        const prizeResetPromises = prizes.map(p => {
-          const prizeRef = doc(db, "prizes", p.id);
-          return updateDoc(prizeRef, { dispensed: {} });
+        await updateDoc(doc(db, "settings", "appSettings"), { 
+            promotionsGeneratedCount: 0,
+            temporaryUnlockThreshold: null 
         });
+        const prizeResetPromises = prizes.map(p => updateDoc(doc(db, "prizes", p.id), { dispensed: {} }));
         await Promise.all(prizeResetPromises);
-
-
         setIsAppLocked(false);
         setPaymentModalVisible(false);
         showAlert('Contabilità Chiusa', 'Pagamento registrato e contabilità chiusa con successo! App sbloccata.');
     } catch (error: any) {
-        console.error("Errore durante la chiusura contabile:", error);
+        console.error("Errore chiusura contabile:", error);
         showAlert("Errore", `Impossibile chiudere la contabilità: ${error.message || 'Errore sconosciuto'}`);
     }
   };
-  // FIREBASE END
 
   const unlockSettings = () => {
     if (settingsPassword === 'freecent2025') {
@@ -1428,22 +1309,15 @@ export default function App() {
     }
   };
 
-  // FIREBASE START - Funzione saveSettings modificata per Firestore
   const saveSettings = async () => {
     const newThreshold = parseFloat(tempThreshold);
     const newPromotionFee = parseFloat(tempPromotionGenerationFee);
     const newCommissionFee = parseFloat(tempCommissionFee);
     const newAutoPaymentThreshold = parseFloat(tempAutoPaymentThreshold);
-
-    if (isNaN(newThreshold) || newThreshold <= 0 ||
-        isNaN(newPromotionFee) || newPromotionFee < 0 ||
-        isNaN(newCommissionFee) || newCommissionFee < 0 ||
-        isNaN(newAutoPaymentThreshold) || newAutoPaymentThreshold <= 0)
-    {
-        showAlert("Errore di input", "Inserisci valori validi per tutte le tariffe e soglie.");
+    if (isNaN(newThreshold) || isNaN(newPromotionFee) || isNaN(newCommissionFee) || isNaN(newAutoPaymentThreshold)) {
+        showAlert("Errore di input", "Inserisci valori numerici validi.");
         return;
     }
-    
     try {
         await updateDoc(doc(db, "settings", "appSettings"), {
             commissionThreshold: newThreshold,
@@ -1451,43 +1325,64 @@ export default function App() {
             commissionFee: newCommissionFee,
             autoPaymentThreshold: newAutoPaymentThreshold,
         });
-        setCommissionThreshold(newThreshold);
-        setPromotionGenerationFee(newPromotionFee);
-        setCommissionFee(newCommissionFee);
-        setAutoPaymentThreshold(newAutoPaymentThreshold);
-
         setAreSettingsUnlocked(false);
         showAlert('Impostazioni Salvate', 'Impostazioni salvate!');
     } catch (error: any) {
-        console.error("Errore nel salvataggio impostazioni:", error);
+        console.error("Errore salvataggio impostazioni:", error);
         showAlert("Errore", `Impossibile salvare le impostazioni: ${error.message || 'Errore sconosciuto'}`);
     }
   };
-  // FIREBASE END
 
-  // FIREBASE START - Funzione saveHairdresserPassword modificata per Firestore
+  const handleSetTemporaryThreshold = async () => {
+    const newTempThreshold = parseFloat(tempUnlockThresholdInput);
+    const currentTotalDue = (appointments.length * commissionFee) + (promotionsGeneratedCount * promotionGenerationFee);
+
+    if (isNaN(newTempThreshold) || newTempThreshold <= currentTotalDue) {
+        showAlert(
+            "Valore Invalido", 
+            `Inserisci un valore numerico maggiore del totale dovuto attuale (€${currentTotalDue.toFixed(2)}).`
+        );
+        return;
+    }
+
+    try {
+        setTemporaryUnlockThreshold(newTempThreshold);
+        
+        await updateDoc(doc(db, "settings", "appSettings"), {
+            temporaryUnlockThreshold: newTempThreshold
+        });
+
+        setTempUnlockThresholdInput('');
+        showAlert(
+            "Successo", 
+            `Nuova soglia temporanea impostata a €${newTempThreshold.toFixed(2)}. L'app è sbloccata.`
+        );
+    } catch (error: any) {
+        console.error("Errore impostazione soglia temporanea:", error);
+        setTemporaryUnlockThreshold(null); // Rollback in caso di errore
+        showAlert("Errore", `Impossibile impostare la soglia temporanea: ${error.message || 'Errore sconosciuto'}`);
+    }
+  };
+
   const saveHairdresserPassword = async () => {
       if(!tempHairdresserPassword.trim()){
           showAlert('Errore', 'La password non può essere vuota.');
           return;
       }
       try {
-        await updateDoc(doc(db, "settings", "appSettings"), {
-            hairdresserPassword: tempHairdresserPassword
-        });
-        setHairdresserPassword(tempHairdresserPassword);
+        await updateDoc(doc(db, "settings", "appSettings"), { hairdresserPassword: tempHairdresserPassword });
         setAreSettingsUnlocked(false);
         showAlert('Password Aggiornata', 'Password parrucchiere aggiornata!');
       } catch (error: any) {
-        console.error("Errore nel salvataggio password parrucchiere:", error);
+        console.error("Errore salvataggio password:", error);
         showAlert("Errore", `Impossibile aggiornare la password: ${error.message || 'Errore sconosciuto'}`);
       }
   }
-  // FIREBASE END
 
   const handleHairdresserLogin = () => {
       if (hairdresserPasswordInput === hairdresserPassword) {
-          setHairdresserLoginModalModalVisible(false);
+          // *** ERRORE CORRETTO QUI ***
+          setHairdresserLoginModalVisible(false);
           setScreen('admin');
           setHairdresserPasswordInput('');
       } else {
@@ -1516,7 +1411,6 @@ export default function App() {
     setReminderModalVisible(true);
   };
 
-  // FIREBASE START - Funzioni Super Admin modificate per Firestore
   const handleAddTreatment = async () => {
       if(!newTreatment.name || !newTreatment.price || !newTreatment.duration) {
           showAlert("Campi Mancanti", "Compila tutti i campi del trattamento.");
@@ -1531,7 +1425,7 @@ export default function App() {
         setNewTreatment({name: '', price: '', duration: ''});
         showAlert("Successo", "Trattamento aggiunto!");
       } catch (error: any) {
-        console.error("Errore nell'aggiunta trattamento:", error);
+        console.error("Errore aggiunta trattamento:", error);
         showAlert("Errore", `Impossibile aggiungere il trattamento: ${error.message || 'Errore sconosciuto'}`);
       }
   };
@@ -1541,7 +1435,7 @@ export default function App() {
         await deleteDoc(doc(db, "treatments", id));
         showAlert("Successo", "Trattamento eliminato!");
       } catch (error: any) {
-        console.error("Errore nell'eliminazione trattamento:", error);
+        console.error("Errore eliminazione trattamento:", error);
         showAlert("Errore", `Impossibile eliminare il trattamento: ${error.message || 'Errore sconosciuto'}`);
       }
   };
@@ -1560,7 +1454,7 @@ export default function App() {
         setNewPrize('');
         showAlert("Successo", "Premio aggiunto!");
       } catch (error: any) {
-        console.error("Errore nell'aggiunta premio:", error);
+        console.error("Errore aggiunta premio:", error);
         showAlert("Errore", `Impossibile aggiungere il premio: ${error.message || 'Errore sconosciuto'}`);
       }
   };
@@ -1570,7 +1464,7 @@ export default function App() {
         await deleteDoc(doc(db, "prizes", idToDelete));
         showAlert("Successo", "Premio eliminato!");
       } catch (error: any) {
-        console.error("Errore nell'eliminazione premio:", error);
+        console.error("Errore eliminazione premio:", error);
         showAlert("Errore", `Impossibile eliminare il premio: ${error.message || 'Errore sconosciuto'}`);
       }
   };
@@ -1586,12 +1480,11 @@ export default function App() {
           });
         }
       } catch (error: any) {
-        console.error("Errore nell'aggiornamento limite premio:", error);
+        console.error("Errore aggiornamento limite premio:", error);
         showAlert("Errore", `Impossibile aggiornare il limite del premio: ${error.message || 'Errore sconosciuto'}`);
       }
   };
 
-  // Nuovo: Gestione Parrucchieri - Aggiunta
   const handleAddHairdresser = async () => {
       if (!newHairdresserName.trim()) {
           showAlert("Nome Mancante", "Inserisci il nome del parrucchiere.");
@@ -1610,17 +1503,15 @@ export default function App() {
                 sunday: null,
             },
             absentDates: [],
-            stripeCustomerId: undefined,
           });
           setNewHairdresserName('');
           showAlert("Successo", "Parrucchiere aggiunto!");
       } catch (error: any) {
-          console.error("Errore nell'aggiunta parrucchiere:", error);
+          console.error("Errore aggiunta parrucchiere:", error);
           showAlert("Errore", `Impossibile aggiungere il parrucchiere: ${error.message || 'Errore sconosciuto'}`);
       }
   };
 
-  // Nuovo: Gestione Parrucchieri - Eliminazione
   const handleDeleteHairdresser = async (id: string) => {
       try {
           await deleteDoc(doc(db, "hairdressers", id));
@@ -1630,254 +1521,156 @@ export default function App() {
           showAlert("Errore", `Impossibile eliminare il parrucchiere: ${error.message || 'Errore sconosciuto'}`);
       }
   };
-  // FIREBASE END
 
-  // Funzioni AI
+  // --- Funzioni AI (rimangono invariate) ---
     const generateAiSuggestion = async () => {
-        if (!aiAnswers.occasion || !aiAnswers.style) {
-            showAlert("Campi Mancanti", "Per favore, rispondi a entrambe le domande.");
-            return;
-        }
+        if (!aiAnswers.occasion || !aiAnswers.style) { showAlert("Campi Mancanti", "Per favore, rispondi a entrambe le domande."); return; }
         setIsGenerating(true);
         setAiSuggestion('');
-        
         const prompt = `Agisci come un esperto hair stylist. Un cliente cerca un consiglio per un look. L'occasione è "${aiAnswers.occasion}" e il suo stile personale è "${aiAnswers.style}". Fornisci un suggestion dettagliato e creativo per un taglio e colore, spiegando perché si adatta al contesto. Sii incoraggiante e professionale.`;
-
-        let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-        const payload = { contents: chatHistory };
-        const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
+        const payload = { contents: [{ role: "user" as const, parts: [{ text: prompt }] }] };
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         try {
             const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await response.json();
-            if (result.candidates && result.candidates[0].content.parts[0].text) {
-                setAiSuggestion(result.candidates[0].content.parts[0].text);
-            } else { throw new Error("Risposta non valida dall'AI."); }
+            if (result.candidates && result.candidates[0].content.parts[0].text) { setAiSuggestion(result.candidates[0].content.parts[0].text); }
+            else { throw new Error("Risposta non valida dall'AI."); }
         } catch (error: any) {
             console.error("Errore AI:", error);
             setAiSuggestion("Siamo spiacenti, si è verificato un errore. Riprova più tardi.");
-        } finally {
-            setIsGenerating(false);
-        }
+        } finally { setIsGenerating(false); }
     };
     
-    // Effect to generate AI description for treatments when modal opens
     useEffect(() => {
         const generateDescription = async () => {
             if (!isTreatmentModalVisible || !selectedTreatmentForModal || aiDescription) return;
-            
             setIsGeneratingDescription(true);
             const prompt = `Scrivi una breve, accattivante e semplice descrizione di marketing per il seguente trattamento per capelli: "${selectedTreatmentForModal.name}". Evidenzia i benefici chiave per il cliente in 2-3 frasi.`;
-            
-            let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
+            const payload = { contents: [{ role: "user" as const, parts: [{ text: prompt }] }] };
+            const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const result = await response.json();
-                if (result.candidates && result.candidates[0].content.parts[0].text) {
-                    setAiDescription(result.candidates[0].content.parts[0].text);
-                } else { throw new Error("Risposta non valida dall'AI."); }
+                if (result.candidates && result.candidates[0].content.parts[0].text) { setAiDescription(result.candidates[0].content.parts[0].text); }
+                else { throw new Error("Risposta non valida dall'AI."); }
             } catch (error: any) {
                 console.error("Errore AI:", error);
                 setAiDescription("Non è stato possibile caricare la descrizione.");
-            } finally {
-                setIsGeneratingDescription(false);
-            }
+            } finally { setIsGeneratingDescription(false); }
         };
         generateDescription();
     }, [isTreatmentModalVisible, selectedTreatmentForModal, aiDescription]);
 
-    // Effect to generate AI reminder for appointments when modal opens
     useEffect(() => {
         const generateReminder = async () => {
             if (!isReminderModalVisible || !selectedAppointmentForReminder || reminderText) return;
-            
             setIsGeneratingReminder(true);
             const { clientName, date, time, clientPhone, hairdresserId } = selectedAppointmentForReminder;
             const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-            
             const hairdresser = hairdressers.find(hd => hd.id === hairdresserId);
             const hairdresserName = hairdresser ? ` con ${hairdresser.name}` : '';
-
             const prompt = `Scrivi un breve, amichevole e professionale messaggio di promemoria per un appuntamento dal parrucchiere. Il nome del cliente è ${clientName}, l'appuntamento è per il giorno ${formattedDate} alle ore ${time}${hairdresserName} presso "${salonNameFromFirestore}". Il loro numero di telefono è ${clientPhone}. Aggiungi un tocco di entusiasmo.`;
-
-            let chatHistory = [{ role: "user" as const, parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-            const apiKey = "AIzaSyA7O1WU20fKBxEoaLdiPYP_NYovRQ9M4_0";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
+            const payload = { contents: [{ role: "user" as const, parts: [{ text: prompt }] }] };
+            const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
             try {
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const result = await response.json();
-                if (result.candidates && result.candidates[0].content.parts[0].text) {
-                    setReminderText(result.candidates[0].content.parts[0].text);
-                } else { throw new Error("Risposta non valida dall'AI."); }
+                if (result.candidates && result.candidates[0].content.parts[0].text) { setReminderText(result.candidates[0].content.parts[0].text); }
+                else { throw new Error("Risposta non valida dall'AI."); }
             } catch (error: any) {
                 console.error("Errore AI:", error);
                 setReminderText(`Ciao ${clientName}! Ti ricordiamo il tuo appuntamento da ${salonNameFromFirestore} per il giorno ${formattedDate} alle ore ${time}${hairdresserName}. A presto!`);
-            } finally {
-                setIsGeneratingReminder(false);
-            }
+            } finally { setIsGeneratingReminder(false); }
         };
         generateReminder();
     }, [isReminderModalVisible, selectedAppointmentForReminder, reminderText, salonNameFromFirestore, hairdressers]);
 
-  // --- Funzioni di Rendering ---
+  // --- Funzioni di Rendering (invariate) ---
   const renderHomeScreen = () => (
-    <div style={styles.page}>
-      {isAppLocked && (
-        <div style={styles.adminAlert}>
-            APP BLOCCATA: Pagamento richiesto nell'Area Riservata.
-        </div>
-      )}
-      <img src={salonLogoUrlFromFirestore} style={styles.logo} alt="Logo del salone" onClick={handleLogoTap} />
-      <h1 style={styles.salonName}>{salonNameFromFirestore}</h1>
-      <p style={styles.salonAddress}>{salonAddressFromFirestore} {salonPhoneFromFirestore && ` | Tel: ${salonPhoneFromFirestore}`}</p>
-      
-      <button style={{...styles.ctaButton, ...(isAppLocked && styles.ctaButtonDisabled)}} onClick={() => !isAppLocked && setScreen('booking')} disabled={isAppLocked}>
-        Prenota un Appuntamento
-      </button>
-
-        <button style={styles.aiButton} onClick={() => setAiModalVisible(true)}>
-        ✨ Consulente di Stile Virtuale
-      </button>
-      
-      <button style={styles.adminButton} onClick={() => setHairdresserLoginModalModalVisible(true)}>
-        Area Riservata
-      </button>
+    <div style={globalStyles.page}>
+      {isAppLocked && <div style={globalStyles.adminAlert}>APP BLOCCATA: Pagamento richiesto nell'Area Riservata.</div>}
+      <img src={salonLogoUrlFromFirestore} style={globalStyles.logo} alt="Logo del salone" onClick={handleLogoTap} />
+      <h1 style={globalStyles.salonName}>{salonNameFromFirestore}</h1>
+      <p style={globalStyles.salonAddress}>{salonAddressFromFirestore} {salonPhoneFromFirestore && ` | Tel: ${salonPhoneFromFirestore}`}</p>
+      <button style={{...globalStyles.ctaButton, ...(isAppLocked && globalStyles.ctaButtonDisabled)}} onClick={() => !isAppLocked && setScreen('booking')} disabled={isAppLocked}>Prenota un Appuntamento</button>
+      <button style={globalStyles.aiButton} onClick={() => setAiModalVisible(true)}>✨ Consulente di Stile Virtuale</button>
+      {/* *** ERRORE CORRETTO QUI *** */}
+      <button style={globalStyles.adminButton} onClick={() => setHairdresserLoginModalVisible(true)}>Area Riservata</button>
     </div>
   );
   
   const renderBookingScreen = () => (
-    <div style={styles.page}>
-      <button style={styles.backButton} onClick={() => setScreen('home')}>
-        ‹ Torna alla Home
-      </button>
-      
-      <h2 style={styles.sectionTitle}>1. Scegli la data</h2>
-      <Calendar 
-        selectedDate={selectedDate}
-        onDateSelect={(date: string) => {
-            setSelectedDate(date);
-            setSelectedSlot('');
-            setSelectedHairdresserId('');
-        }}
-      />
-
+    <div style={globalStyles.page}>
+      <button style={globalStyles.backButton} onClick={() => setScreen('home')}>‹ Torna alla Home</button>
+      <h2 style={globalStyles.sectionTitle}>1. Scegli la data</h2>
+      <Calendar selectedDate={selectedDate} onDateSelect={(date: string) => { setSelectedDate(date); setSelectedSlot(''); setSelectedHairdresserId(''); }} />
       {selectedDate && (
         <>
-          <h2 style={styles.sectionTitle}>2. Scegli il tuo parrucchiere</h2>
-          <div style={styles.slotsContainer}>
+          <h2 style={globalStyles.sectionTitle}>2. Scegli il tuo parrucchiere</h2>
+          <div style={globalStyles.slotsContainer}>
             {hairdressers.map(hd => (
-              <button
-                key={hd.id}
-                style={{
-                  ...styles.slotItem,
-                  ...(selectedHairdresserId === hd.id && styles.slotItemSelected)
-                }}
-                onClick={() => {
-                    setSelectedHairdresserId(hd.id);
-                    setSelectedSlot('');
-                }}
-              >
-                {hd.name}
-              </button>
+              <button key={hd.id} style={{ ...globalStyles.slotItem, ...(selectedHairdresserId === hd.id && globalStyles.slotItemSelected) }} onClick={() => { setSelectedHairdresserId(hd.id); setSelectedSlot(''); }}>{hd.name}</button>
             ))}
           </div>
         </>
       )}
-
       {selectedHairdresserId && selectedDate && (
         <>
-          <h2 style={styles.sectionTitle}>3. Scegli l'orario</h2>
-          <div style={styles.slotsContainer}>
-            {getHairdresserAvailableSlots(selectedDate, selectedHairdresserId).map(time => {
-              const isBooked = appointments.some(app => 
-                app.date === selectedDate && 
-                app.time === time && 
-                app.hairdresserId === selectedHairdresserId
-              );
-              return <TimeSlot key={time} time={time} onSelect={setSelectedSlot} isSelected={selectedSlot === time} isBooked={isBooked} />
-            })}
+          <h2 style={globalStyles.sectionTitle}>3. Scegli l'orario</h2>
+          <div style={globalStyles.slotsContainer}>
+            {getHairdresserAvailableSlots(selectedDate, selectedHairdresserId).map(time => (
+              <TimeSlot key={time} time={time} onSelect={setSelectedSlot} isSelected={selectedSlot === time} isBooked={appointments.some(app => app.date === selectedDate && app.time === time && app.hairdresserId === selectedHairdresserId)} />
+            ))}
           </div>
         </>
       )}
-
       {selectedSlot && selectedHairdresserId && (
         <>
-          <h2 style={styles.sectionTitle}>4. Scegli i trattamenti</h2>
+          <h2 style={globalStyles.sectionTitle}>4. Scegli i trattamenti</h2>
           {treatments.map(item => <TreatmentItem key={item.id} item={item} onSelect={handleSelectTreatment} isSelected={selectedTreatments.some(t => t.id === item.id)} onInfoClick={openTreatmentModal} /> )}
         </>
       )}
-
-      {/* --- CORREZIONE QUI: Spostiamo questi campi fuori dal blocco di controllo totale --- */}
-      {selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && (
-          <h2 style={styles.sectionTitle}>5. Inserisci i tuoi dati</h2>
-      )}
       {selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && (
         <>
-          <input type="text" style={styles.inputField} placeholder="Il tuo Nome e Cognome" value={clientName} onChange={(e) => setClientName(e.target.value)} />
-          <input type="tel" style={styles.inputField} placeholder="Il tuo Numero di Telefono" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
+          <h2 style={globalStyles.sectionTitle}>5. Inserisci i tuoi dati</h2>
+          <input type="text" style={globalStyles.inputField} placeholder="Il tuo Nome e Cognome" value={clientName} onChange={(e) => setClientName(e.target.value)} />
+          <input type="tel" style={globalStyles.inputField} placeholder="Il tuo Numero di Telefono" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} />
         </>
       )}
-      {/* --- FINE CORREZIONE --- */}
-      
       {clientName && clientPhone && selectedTreatments.length > 0 && selectedSlot && selectedDate && selectedHairdresserId && (
         <>
-            {/* Nuovo: Sezione Punti Fedeltà */}
             {clientPhone.trim() && (
-                <div style={styles.summaryContainer}>
-                    <h3 style={styles.summaryTitle}>Punti Fedeltà</h3>
+                <div style={globalStyles.summaryContainer}>
+                    <h3 style={globalStyles.subSectionTitle}>Punti Fedeltà</h3>
                     {(() => {
                         const currentClient = clientProfiles.find(p => p.phone === clientPhone);
-                        if (!currentClient) {
-                            return <p style={styles.summaryText}>Registrati con questo numero per iniziare a guadagnare punti!</p>;
-                        }
+                        if (!currentClient) return <p style={globalStyles.summaryText}>Registrati con questo numero per iniziare a guadagnare punti!</p>;
                         return (
                             <>
-                                <p style={styles.summaryText}>Hai accumulato: <b>{currentClient.loyaltyPoints} punti</b></p>
-                                <p style={styles.summaryText}>Punti guadagnati con questa prenotazione: <b>+{totalCost * LOYALTY_SETTINGS.pointsPerEuro}</b></p>
-                                <h4 style={styles.subSectionTitle}>Riscatta Premio:</h4>
+                                <p style={globalStyles.summaryText}>Hai accumulato: <b>{currentClient.loyaltyPoints} punti</b></p>
+                                <p style={globalStyles.summaryText}>Punti guadagnati: <b>+{totalCost * LOYALTY_SETTINGS.pointsPerEuro}</b></p>
+                                <h4 style={globalStyles.subSectionTitle}>Riscatta Premio:</h4>
                                 {LOYALTY_SETTINGS.thresholds.map(threshold => (
-                                    <button
-                                        key={threshold.points}
-                                        style={{
-                                            ...styles.smallButton,
-                                            marginRight: '10px',
-                                            backgroundColor: currentClient.loyaltyPoints >= threshold.points ? '#4CAF50' : '#555',
-                                            color: currentClient.loyaltyPoints >= threshold.points ? '#1a1a1a' : '#aaa',
-                                            cursor: currentClient.loyaltyPoints >= threshold.points ? 'pointer' : 'not-allowed',
-                                        }}
-                                        disabled={currentClient.loyaltyPoints < threshold.points}
-                                        onClick={() => {
-                                            showAlert("Riscatto Premio", `Hai riscattato ${threshold.description}! I tuoi punti verranno aggiornati dopo la conferma della prenotazione.`);
-                                        }}
-                                    >
-                                        {threshold.description} ({threshold.points} punti)
-                                    </button>
+                                    <button key={threshold.points} style={{ ...globalStyles.smallButton, marginRight: '10px', backgroundColor: currentClient.loyaltyPoints >= threshold.points ? '#4CAF50' : '#555', color: currentClient.loyaltyPoints >= threshold.points ? '#1a1a1a' : '#aaa', cursor: currentClient.loyaltyPoints >= threshold.points ? 'pointer' : 'not-allowed' }} disabled={currentClient.loyaltyPoints < threshold.points} onClick={() => { showAlert("Riscatto Premio", `Hai riscattato ${threshold.description}!`); }}>{threshold.description} ({threshold.points} punti)</button>
                                 ))}
                             </>
                         );
                     })()}
                 </div>
             )}
-
-            <div style={styles.summaryContainer}>
-                <h3 style={styles.summaryTitle}>Riepilogo Prenotazione</h3>
-                <p style={styles.summaryText}><b>Nome:</b> {clientName}</p>
-                <p style={styles.summaryText}><b>Telefono:</b> {clientPhone}</p>
-                <p style={styles.summaryText}><b>Data:</b> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</p>
-                <p style={styles.summaryText}><b>Orario:</b> {selectedSlot}</p>
-                <p style={styles.summaryText}><b>Parrucchiere:</b> {hairdressers.find(hd => hd.id === selectedHairdresserId)?.name || 'N/A'}</p>
-                <p style={styles.summaryText}><b>Trattamenti:</b> {selectedTreatments.map(t => t.name).join(', ')}</p>
-                <p style={styles.summaryTotal}>Totale: €{totalCost}</p>
-                <button style={styles.ctaButton} onClick={handleBooking}>
-                    Conferma Prenotazione
-                </button>
+            <div style={globalStyles.summaryContainer}>
+                <h3 style={globalStyles.summaryTitle}>Riepilogo Prenotazione</h3>
+                <p style={globalStyles.summaryText}><b>Nome:</b> {clientName}</p>
+                <p style={globalStyles.summaryText}><b>Telefono:</b> {clientPhone}</p>
+                <p style={globalStyles.summaryText}><b>Data:</b> {new Date(selectedDate + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</p>
+                <p style={globalStyles.summaryText}><b>Orario:</b> {selectedSlot}</p>
+                <p style={globalStyles.summaryText}><b>Parrucchiere:</b> {hairdressers.find(hd => hd.id === selectedHairdresserId)?.name || 'N/A'}</p>
+                <p style={globalStyles.summaryText}><b>Trattamenti:</b> {selectedTreatments.map(t => t.name).join(', ')}</p>
+                <p style={globalStyles.summaryTotal}>Totale: €{totalCost.toFixed(2)}</p>
+                <button style={globalStyles.ctaButton} onClick={handleBooking}>Conferma Prenotazione</button>
             </div>
         </>
       )}
@@ -1888,200 +1681,113 @@ export default function App() {
     const totalAppointmentsDue = appointments.length * commissionFee;
     const totalPromotionsDue = promotionsGeneratedCount * promotionGenerationFee;
     const totalDue = totalAppointmentsDue + totalPromotionsDue;
-    
     return (
-      <div style={styles.page}>
-           <button style={styles.backButton} onClick={() => setScreen('home')}>
-           ‹ Torna alla Home
-         </button>
-        
-        <div style={styles.adminHeader}>
-            <h1 style={styles.adminTitle}>Dashboard Parrucchiere</h1>
-            <p style={styles.adminSubtitle}>Periodo contabile corrente</p>
+      <div style={globalStyles.page}>
+         <button style={globalStyles.backButton} onClick={() => setScreen('home')}>‹ Torna alla Home</button>
+        <div style={globalStyles.adminHeader}>
+            <h1 style={globalStyles.adminTitle}>Dashboard Parrucchiere</h1>
+            <p style={globalStyles.adminSubtitle}>Periodo contabile corrente</p>
         </div>
-
-        <div style={styles.settingsSection}>
-            <h3 style={styles.subSectionTitle}>Crea una Promozione</h3>
-            <p style={{...styles.modalMessage, textAlign: 'left', marginBottom: '15px'}}>Descrivi la tua offerta. L'AI creerà un'immagine accattivante da mostrare ai clienti all'apertura dell'app.</p>
-            <input type="text" value={promoDescription} onChange={(e) => setPromoDescription(e.target.value)} placeholder="Es: Sconto 20% sul colore a Giugno" style={styles.inputField} />
+        <div style={globalStyles.settingsSection}>
+            <h3 style={globalStyles.subSectionTitle}>Crea una Promozione</h3>
+            <p style={{...globalStyles.modalMessage, textAlign: 'left', marginBottom: '15px'}}>Descrivi la tua offerta. L'AI creerà un'immagine accattivante.</p>
+            <input type="text" value={promoDescription} onChange={(e) => setPromoDescription(e.target.value)} placeholder="Es: Sconto 20% sul colore" style={globalStyles.inputField} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
-                <button
-                    style={{
-                        ...styles.smallButton,
-                        flex: 1,
-                        minWidth: 'calc(50% - 5px)',
-                        backgroundColor: promoSubject === 'woman' ? '#e6c300' : '#444',
-                        color: promoSubject === 'woman' ? '#1a1a1a' : '#e6c300',
-                    }}
-                    onClick={() => setPromoSubject('woman')}
-                >
-                    Donna
-                </button>
-                <button
-                    style={{
-                        ...styles.smallButton,
-                        flex: 1,
-                        minWidth: 'calc(50% - 5px)',
-                        backgroundColor: promoSubject === 'man' ? '#e6c300' : '#444',
-                        color: promoSubject === 'man' ? '#1a1a1a' : '#e6c300',
-                    }}
-                    onClick={() => setPromoSubject('man')}
-                >
-                    Uomo
-                </button>
-                <button
-                    style={{
-                        ...styles.smallButton,
-                        flex: 1,
-                        minWidth: 'calc(50% - 5px)',
-                        backgroundColor: promoSubject === 'couple' ? '#e6c300' : '#444',
-                        color: promoSubject === 'couple' ? '#1a1a1a' : '#e6c300',
-                    }}
-                    onClick={() => setPromoSubject('couple')}
-                >
-                    Coppia
-                </button>
-                <button
-                    style={{
-                        ...styles.smallButton,
-                        flex: 1,
-                        minWidth: 'calc(50% - 5px)',
-                        backgroundColor: promoSubject === 'scenario' ? '#e6c300' : '#444',
-                        color: promoSubject === 'scenario' ? '#1a1a1a' : '#e6c300',
-                    }}
-                    onClick={() => setPromoSubject('scenario')}
-                >
-                    Scenario
-                </button>
+                <button style={{...globalStyles.smallButton, flex: 1, minWidth: 'calc(50% - 5px)', backgroundColor: promoSubject === 'woman' ? '#e6c300' : '#444', color: promoSubject === 'woman' ? '#1a1a1a' : '#e6c300' }} onClick={() => setPromoSubject('woman')}>Donna</button>
+                <button style={{...globalStyles.smallButton, flex: 1, minWidth: 'calc(50% - 5px)', backgroundColor: promoSubject === 'man' ? '#e6c300' : '#444', color: promoSubject === 'man' ? '#1a1a1a' : '#e6c300' }} onClick={() => setPromoSubject('man')}>Uomo</button>
+                <button style={{...globalStyles.smallButton, flex: 1, minWidth: 'calc(50% - 5px)', backgroundColor: promoSubject === 'couple' ? '#e6c300' : '#444', color: promoSubject === 'couple' ? '#1a1a1a' : '#e6c300' }} onClick={() => setPromoSubject('couple')}>Coppia</button>
+                <button style={{...globalStyles.smallButton, flex: 1, minWidth: 'calc(50% - 5px)', backgroundColor: promoSubject === 'scenario' ? '#e6c300' : '#444', color: promoSubject === 'scenario' ? '#1a1a1a' : '#e6c300' }} onClick={() => setPromoSubject('scenario')}>Scenario</button>
             </div>
-            {isGeneratingPromo ? <div style={{...styles.spinner, animation: 'spin 1s linear infinite'}}></div> : <button onClick={generatePromoImage} style={{...styles.ctaButton, ...(promoDescription.trim() === '' || promoSubject === null ? styles.ctaButtonDisabled : {})}} disabled={promoDescription.trim() === '' || promoSubject === null}>Genera Immagine Promozionale</button>}
+            {isGeneratingPromo ? <div style={{...globalStyles.spinner, animation: 'spin 1s linear infinite'}}></div> : <button onClick={generatePromoImage} style={{...globalStyles.ctaButton, ...(promoDescription.trim() === '' || promoSubject === null ? globalStyles.ctaButtonDisabled : {})}} disabled={promoDescription.trim() === '' || promoSubject === null}>Genera Immagine</button>}
             {activePromotionImage && (
                 <div>
-                    <h4 style={styles.subSectionTitle}>Promozione Attiva</h4>
+                    <h4 style={globalStyles.subSectionTitle}>Promozione Attiva</h4>
                     <img src={activePromotionImage} alt="Anteprima promozione" style={{width: '100%', borderRadius: '10px', marginTop: '10px'}} />
-                    <button onClick={removePromotionImage} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Rimuovi Promozione</button>
+                    <button onClick={removePromotionImage} style={{...globalStyles.deleteButton, marginTop: '10px', width: '100%'}}>Rimuovi Promozione</button>
                 </div>
             )}
         </div>
-
-        {isAppLocked && (
-            <div style={styles.adminAlert}>
-                APP BLOCCATA - PAGAMENTO RICHIESTO
-            </div>
-        )}
-
-        <div style={styles.statsContainer}>
-            <div style={styles.statBox}>
-                <p style={styles.statValue}>{appointments.length}</p>
-                <p style={styles.statLabel}>Appuntamenti da pagare</p>
-            </div>
-            <div style={styles.statBox}>
-                <p style={styles.statValue}>€ {totalAppointmentsDue.toFixed(2)}</p>
-                <p style={styles.statLabel}>Commissioni Appuntamenti</p>
-            </div>
-             <div style={styles.statBox}>
-                <p style={styles.statValue}>€ {totalPromotionsDue.toFixed(2)}</p>
-                <p style={styles.statLabel}>Costi Promozioni ({promotionsGeneratedCount}x)</p>
-            </div>
-            <div style={styles.statBox}>
-                <p style={styles.statValue}>€ {totalDue.toFixed(2)}</p>
-                <p style={styles.statLabel}>Totale Dovuto</p>
-            </div>
+        {isAppLocked && <div style={globalStyles.adminAlert}>APP BLOCCATA - PAGAMENTO RICHIESTO</div>}
+        <div style={globalStyles.statsContainer}>
+            <div style={globalStyles.statBox}><p style={globalStyles.statValue}>{appointments.length}</p><p style={globalStyles.statLabel}>Appuntamenti</p></div>
+            <div style={globalStyles.statBox}><p style={globalStyles.statValue}>€ {totalAppointmentsDue.toFixed(2)}</p><p style={globalStyles.statLabel}>Commissioni App.</p></div>
+            <div style={globalStyles.statBox}><p style={globalStyles.statValue}>€ {totalPromotionsDue.toFixed(2)}</p><p style={globalStyles.statLabel}>Costi Promo ({promotionsGeneratedCount}x)</p></div>
+            <div style={globalStyles.statBox}><p style={globalStyles.statValue}>€ {totalDue.toFixed(2)}</p><p style={globalStyles.statLabel}>Totale Dovuto</p></div>
         </div>
-
-        <button 
-            style={{ ...styles.ctaButton, ...(appointments.length === 0 && styles.ctaButtonDisabled), ...(isAppLocked && styles.ctaButtonAlert) }}
-            onClick={() => setPaymentModalVisible(true)}
-            disabled={appointments.length === 0 && promotionsGeneratedCount === 0}
-        >
-            {isAppLocked ? 'PAGA ORA' : 'Chiudi Contabilità e Paga'}
-        </button>
-        
-        <h2 style={styles.sectionTitle}>Dettaglio Appuntamenti Correnti</h2>
+        <button style={{ ...globalStyles.ctaButton, ...(appointments.length === 0 && promotionsGeneratedCount === 0 && globalStyles.ctaButtonDisabled), ...(isAppLocked && globalStyles.ctaButtonAlert) }} onClick={() => setPaymentModalVisible(true)} disabled={appointments.length === 0 && promotionsGeneratedCount === 0}>{isAppLocked ? 'PAGA ORA' : 'Chiudi Contabilità e Paga'}</button>
+        <h2 style={globalStyles.sectionTitle}>Dettaglio Appuntamenti Correnti</h2>
         {appointments.length > 0 ? (
-            [...appointments].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((app) => {
-                const assignedHairdresser = hairdressers.find(hd => hd.id === app.hairdresserId);
-                return (
-                    <div key={app.id} style={styles.appointmentCard}>
-                      <p style={styles.appointmentClient}>{app.clientName}</p>
-                      <p style={styles.appointmentDate}>{new Date(app.date + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})} alle {app.time}</p>
-                      {assignedHairdresser && (
-                        <p style={styles.appointmentServices}>Parrucchiere: {assignedHairdresser.name}</p>
-                      )}
-                      {app.prize && !app.prize.includes('Ritenta') && (
-                        <p style={styles.appointmentPrize}>🏆 Premio Vinto: {app.prize}</p>
-                      )}
-                      <button style={styles.smallButton} onClick={() => openReminderModal(app)}>✨ Genera Promemoria</button>
-                    </div>
-                );
-            })
-        ) : <p style={styles.noAppointmentsText}>Nessun appuntamento in attesa di pagamento.</p> }
-
-        <div style={styles.archiveSection}>
-            <h2 style={styles.sectionTitle}>Archivio Chiusure Contabili</h2>
+            [...appointments].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((app) => (
+                <div key={app.id} style={globalStyles.appointmentCard}>
+                  <p style={globalStyles.appointmentClient}>{app.clientName}</p>
+                  <p style={globalStyles.appointmentDate}>{new Date(app.date + 'T00:00:00').toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})} alle {app.time}</p>
+                  {hairdressers.find(hd => hd.id === app.hairdresserId) && (<p style={globalStyles.appointmentServices}>Parrucchiere: {hairdressers.find(hd => hd.id === app.hairdresserId)?.name}</p>)}
+                  {app.prize && !app.prize.includes('Ritenta') && <p style={globalStyles.appointmentPrize}>🏆 Premio Vinto: {app.prize}</p>}
+                  <button style={globalStyles.smallButton} onClick={() => openReminderModal(app)}>✨ Genera Promemoria</button>
+                </div>
+            ))
+        ) : <p style={globalStyles.noAppointmentsText}>Nessun appuntamento in attesa di pagamento.</p> }
+        <div style={globalStyles.archiveSection}>
+            <h2 style={globalStyles.sectionTitle}>Archivio Chiusure Contabili</h2>
             {archivedClosures.length > 0 ? (
                 archivedClosures.map(closure => (
-                    <div key={closure.id} style={styles.appointmentCard}>
-                                        <p style={styles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
-                                        <p style={styles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
-                                        {closure.promotionGenerationCost !== undefined && (
-                                            <p style={styles.appointmentServices}>Costo Promozioni: €{closure.promotionGenerationCost.toFixed(2)}</p>
-                                        )}
-                                        <p style={styles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
+                    <div key={closure.id} style={globalStyles.appointmentCard}>
+                        <p style={globalStyles.appointmentClient}>Chiusura del {new Date(closure.date).toLocaleString('it-IT')}</p>
+                        <p style={globalStyles.appointmentServices}>Appuntamenti pagati: {closure.appointmentCount}</p>
+                        {closure.promotionGenerationCost !== undefined && (<p style={globalStyles.appointmentServices}>Costo Promozioni: €{closure.promotionGenerationCost.toFixed(2)}</p>)}
+                        <p style={globalStyles.appointmentTotal}>Importo versato: €{closure.amountPaid.toFixed(2)}</p>
                     </div>
                 ))
-            ) : <p style={styles.noAppointmentsText}>Nessuna chiusura archiviata.</p>}
+            ) : <p style={globalStyles.noAppointmentsText}>Nessuna chiusura archiviata.</p>}
         </div>
-
-        <h2 style={styles.sectionTitle}>Opzioni di Pagamento Automatico</h2>
-        {hairdressers.map(hd => (
-            <div key={hd.id} style={styles.appointmentCard}>
-                <p style={styles.appointmentClient}>{hd.name}</p>
-                <button
-                    style={styles.smallButton}
-                    onClick={() => {
-                        setSelectedHairdresserForPayment(hd);
-                        setIsPaymentSetupModalVisible(true);
-                    }}
-                >
-                    {hd.stripeCustomerId ? 'Modifica Carta' : 'Configura Pagamento Automatico'}
-                </button>
-                {hd.stripeCustomerId && <p style={{...styles.summaryText, marginTop: '10px'}}>Pagamento automatico configurato.</p>}
-            </div>
-        ))}
-
+        <h2 style={globalStyles.sectionTitle}>Opzioni di Pagamento Automatico</h2>
+        <div style={globalStyles.appointmentCard}>
+            <p style={globalStyles.appointmentClient}>Pagamento Salone</p>
+            <p style={{...globalStyles.appointmentServices, marginTop: '10px'}}>
+                {salonStripeCustomerId 
+                    ? 'Il pagamento automatico per il salone è configurato.' 
+                    : 'Il pagamento automatico per il salone non è ancora stato configurato.'
+                }
+            </p>
+            <button
+                style={globalStyles.smallButton}
+                onClick={() => setIsPaymentSetupModalVisible(true)}
+            >
+                {salonStripeCustomerId ? 'Modifica Dati di Pagamento' : 'Configura Pagamento Automatico'}
+            </button>
+        </div>
       </div>
     );
   };
   
   const AiModal = () => (
-    <div style={styles.modalOverlay} onClick={() => setAiModalVisible(false)}>
-      <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-        <h2 style={styles.modalTitle}>✨ Trova il tuo Look Ideale</h2>
-        <p style={styles.modalMessage}>Rispondi a due semplici domande e lascia che la nostra AI ti suggerisca il look perfetto per te!</p>
+    <div style={globalStyles.modalOverlay} onClick={() => setAiModalVisible(false)}>
+      <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <h2 style={globalStyles.modalTitle}>✨ Trova il tuo Look Ideale</h2>
+        <p style={globalStyles.modalMessage}>Rispondi a due semplici domande e lascia che la nostra AI ti suggerisca il look perfetto per te!</p>
         {!isGenerating && !aiSuggestion && (
           <>
-            <label style={styles.aiFormLabel}>Per quale occasione?</label>
-            <select name="occasion" style={styles.aiSelect} value={aiAnswers.occasion} onChange={(e) => setAiAnswers({...aiAnswers, occasion: e.target.value})}>
+            <label style={globalStyles.aiFormLabel}>Per quale occasione?</label>
+            <select name="occasion" style={globalStyles.aiSelect} value={aiAnswers.occasion} onChange={(e) => setAiAnswers({...aiAnswers, occasion: e.target.value})}>
               <option value="">Scegli un'opzione...</option>
               <option value="Vita di tutti i giorni">Vita di tutti i giorni</option>
               <option value="Evento speciale (matrimonio, festa)">Evento speciale (matrimonio, festa)</option>
               <option value="Incontro di lavoro importante">Incontro di lavoro importante</option>
               <option value="Voglia di un cambiamento radicale">Voglia di un cambiamento radicale</option>
             </select>
-            <label style={styles.aiFormLabel}>Qual è il tuo stile?</label>
-            <select name="style" style={styles.aiSelect} value={aiAnswers.style} onChange={(e) => setAiAnswers({...aiAnswers, style: e.target.value})}>
+            <label style={globalStyles.aiFormLabel}>Qual è il tuo stile?</label>
+            <select name="style" style={globalStyles.aiSelect} value={aiAnswers.style} onChange={(e) => setAiAnswers({...aiAnswers, style: e.target.value})}>
               <option value="">Scegli un'opzione...</option>
               <option value="Elegante e classico">Elegante e classico</option>
               <option value="Moderno e audace">Moderno e audace</option>
               <option value="Naturale e minimalista">Naturale e minimalista</option>
               <option value="Casual e sportivo">Casual e sportivo</option>
             </select>
-            <button style={{...styles.ctaButton, marginTop: '30px'}} onClick={generateAiSuggestion}>Genera Suggerimento</button>
+            <button style={{...globalStyles.ctaButton, marginTop: '30px'}} onClick={generateAiSuggestion}>Genera Suggerimento</button>
           </>
         )}
-        {isGenerating && <div style={{...styles.spinner, animation: 'spin 1s linear infinite'}}></div>}
-        {aiSuggestion && (<> <div style={styles.aiResultBox}>{aiSuggestion}</div> <button style={styles.modalButton} onClick={() => setAiModalVisible(false)}>Chiudi</button> </>)}
+        {isGenerating && <div style={{...globalStyles.spinner, animation: 'spin 1s linear infinite'}}></div>}
+        {aiSuggestion && (<> <div style={globalStyles.aiResultBox}>{aiSuggestion}</div> <button style={globalStyles.modalButton} onClick={() => setAiModalVisible(false)}>Chiudi</button> </>)}
       </div>
     </div>
   );
@@ -2089,26 +1795,26 @@ export default function App() {
   const TreatmentModal = () => {
     if (!selectedTreatmentForModal) return null;
     return (
-      <div style={styles.modalOverlay} onClick={() => setTreatmentModalVisible(false)}>
-        <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-          <h2 style={styles.modalTitle}>{selectedTreatmentForModal.name}</h2>
-          {isGeneratingDescription && <div style={{...styles.spinner, animation: 'spin 1s linear infinite'}}></div>}
-          {!isGeneratingDescription && aiDescription && <div style={styles.aiResultBox}>{aiDescription}</div>}
-          <button style={styles.modalButton} onClick={() => setTreatmentModalVisible(false)}>Chiudi</button>
+      <div style={globalStyles.modalOverlay} onClick={() => setTreatmentModalVisible(false)}>
+        <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <h2 style={globalStyles.modalTitle}>{selectedTreatmentForModal.name}</h2>
+          {isGeneratingDescription && <div style={{...globalStyles.spinner, animation: 'spin 1s linear infinite'}}></div>}
+          {!isGeneratingDescription && aiDescription && <div style={globalStyles.aiResultBox}>{aiDescription}</div>}
+          <button style={globalStyles.modalButton} onClick={() => setTreatmentModalVisible(false)}>Chiudi</button>
         </div>
       </div>
     );
   };
   
   const ReminderModal = () => (
-    <div style={styles.modalOverlay} onClick={() => setReminderModalVisible(false)}>
-      <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-        <h2 style={styles.modalTitle}>✨ Promemoria Generato</h2>
-        {isGeneratingReminder && <div style={{...styles.spinner, animation: 'spin 1s linear infinite'}}></div>}
+    <div style={globalStyles.modalOverlay} onClick={() => setReminderModalVisible(false)}>
+      <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <h2 style={globalStyles.modalTitle}>✨ Promemoria Generato</h2>
+        {isGeneratingReminder && <div style={{...globalStyles.spinner, animation: 'spin 1s linear infinite'}}></div>}
         {!isGeneratingReminder && reminderText && (
           <>
-            <div style={styles.aiResultBox}>{reminderText}</div>
-            <button style={{...styles.ctaButton, marginTop: '15px'}} onClick={() => {
+            <div style={globalStyles.aiResultBox}>{reminderText}</div>
+            <button style={{...globalStyles.ctaButton, marginTop: '15px'}} onClick={() => {
                 const textarea = document.createElement('textarea');
                 textarea.value = reminderText;
                 document.body.appendChild(textarea);
@@ -2119,7 +1825,7 @@ export default function App() {
             }}>Copia Testo</button>
           </>
         )}
-        <button style={styles.modalButton} onClick={() => setReminderModalVisible(false)}>Chiudi</button>
+        <button style={globalStyles.modalButton} onClick={() => setReminderModalVisible(false)}>Chiudi</button>
       </div>
     </div>
   );
@@ -2134,23 +1840,15 @@ export default function App() {
         const today = getTodayString();
         const week = getWeekNumber(new Date());
         const month = getMonthString(new Date());
-
         const availablePrizes = prizes.filter(p => {
             if (p.text.includes('Ritenta')) return true;
-
             const dailyCount = p.dispensed.daily?.date === today ? (p.dispensed.daily.count || 0) : 0;
             const weeklyCount = p.dispensed.weekly?.week === week ? (p.dispensed.weekly.count || 0) : 0;
             const monthlyCount = p.dispensed.monthly?.month === month ? (p.dispensed.monthly.count || 0) : 0;
-
             return dailyCount < p.limits.daily && weeklyCount < p.limits.weekly && monthlyCount < p.limits.monthly;
         });
-
         const eligible = availablePrizes.filter(p => !p.text.includes('Ritenta'));
-        if (eligible.length > 0) {
-            setPrize(eligible[Math.floor(Math.random() * eligible.length)]);
-        } else {
-            setPrize(prizes.find(p => p.text.includes('Ritenta')) || null);
-        }
+        setPrize(eligible.length > 0 ? eligible[Math.floor(Math.random() * eligible.length)] : prizes.find(p => p.text.includes('Ritenta')) || null);
     }, [prizes]);
 
     useEffect(() => {
@@ -2158,20 +1856,15 @@ export default function App() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      
       canvas.width = 300;
       canvas.height = 150;
       ctx.fillStyle = '#b0b0b0';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      setIsRevealed(false);
-      isDrawingRef.current = false;
-
       const getEventPosition = (e: MouseEvent | TouchEvent) => {
         const rect = canvas.getBoundingClientRect();
         const event = 'touches' in e ? e.touches[0] : e;
         return { x: event.clientX - rect.left, y: event.clientY - rect.top };
       };
-
       const startDrawing = (e: MouseEvent | TouchEvent) => { e.preventDefault(); isDrawingRef.current = true; draw(e); };
       const stopDrawing = () => { isDrawingRef.current = false; checkRevealed(); };
       const draw = (e: MouseEvent | TouchEvent) => {
@@ -2183,22 +1876,12 @@ export default function App() {
         ctx.arc(x, y, 20, 0, Math.PI * 2, false);
         ctx.fill();
       };
-
       const checkRevealed = () => {
           const imageData = ctx.getImageData(0,0, canvas.width, canvas.height);
-          const data = imageData.data;
           let transparentPixels = 0;
-          for(let i=3; i < data.length; i+=4) {
-              if (data[i] === 0) {
-                  transparentPixels++;
-              }
-          }
-          const revealedPercentage = (transparentPixels / (canvas.width * canvas.height)) * 100;
-          if (revealedPercentage > 50) {
-              setIsRevealed(true);
-          }
+          for(let i=3; i < imageData.data.length; i+=4) if (imageData.data[i] === 0) transparentPixels++;
+          if ((transparentPixels / (canvas.width * canvas.height)) * 100 > 50) setIsRevealed(true);
       };
-      
       canvas.addEventListener('mousedown', startDrawing);
       canvas.addEventListener('mousemove', draw);
       canvas.addEventListener('mouseup', stopDrawing);
@@ -2206,9 +1889,7 @@ export default function App() {
       canvas.addEventListener('touchstart', startDrawing, { passive: false });
       canvas.addEventListener('touchmove', draw, { passive: false });
       canvas.addEventListener('touchend', stopDrawing);
-      canvas.addEventListener('touchcancel', stopDrawing);
-
-      return () => { 
+      return () => {
         canvas.removeEventListener('mousedown', startDrawing);
         canvas.removeEventListener('mousemove', draw);
         canvas.removeEventListener('mouseup', stopDrawing);
@@ -2216,7 +1897,6 @@ export default function App() {
         canvas.removeEventListener('touchstart', startDrawing);
         canvas.removeEventListener('touchmove', draw);
         canvas.removeEventListener('touchend', stopDrawing);
-        canvas.removeEventListener('touchcancel', stopDrawing);
       };
     }, [prize]);
 
@@ -2224,324 +1904,199 @@ export default function App() {
         if (!prize) return;
         const prizeWindow = window.open('', '', 'width=400,height=300');
         if (prizeWindow) {
-            prizeWindow.document.write(`
-                <html><head><title>Il Tuo Premio - ${salonNameFromFirestore}</title>
-                <style>
-                    body { font-family: sans-serif; background-color: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-                    .container { text-align: center; border: 3px solid #e6c300; padding: 30px; border-radius: 15px; background-color: #2c2c2c; }
-                    h1 { color: #e6c300; }
-                </style>
-                </head><body>
-                <div class="container">
-                    <h1>Congratulazioni!</h1>
-                    <p>Hai vinto:</p>
-                    <h2>${prize.text}</h2>
-                    <p><small>Presenta questo screenshot alla cassa. Valido per 30 giorni.</small></p>
-                </div>
-                </body></html>
-            `);
+            prizeWindow.document.write(`<html><head><title>Il Tuo Premio - ${salonNameFromFirestore}</title><style>body { font-family: sans-serif; background-color: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; } .container { text-align: center; border: 3px solid #e6c300; padding: 30px; border-radius: 15px; background-color: #2c2c2c; } h1 { color: #e6c300; }</style></head><body><div class="container"><h1>Congratulazioni!</h1><p>Hai vinto:</p><h2>${prize.text}</h2><p><small>Presenta questo screenshot alla cassa. Valido per 30 giorni.</small></p></div></body></html>`);
         }
     };
     
     return (
-      <div style={styles.modalOverlay} onClick={() => onGameEnd(prize)}>
-        <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-          <h2 style={styles.modalTitle}>Il tuo Gratta e Vinci!</h2>
-          <p style={styles.modalMessage}>Usa il mouse o il dito per grattare e scoprire se hai vinto un premio!</p>
-          <div style={styles.scratchCardContainer}>
+      <div style={globalStyles.modalOverlay} onClick={() => onGameEnd(prize)}>
+        <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <h2 style={globalStyles.modalTitle}>Il tuo Gratta e Vinci!</h2>
+          <p style={globalStyles.modalMessage}>Gratta e scopri se hai vinto un premio!</p>
+          <div style={globalStyles.scratchCardContainer}>
             <span>{prize ? prize.text : ''}</span>
-            <canvas ref={canvasRef} width="300" height="150" style={styles.scratchCanvas} />
+            <canvas ref={canvasRef} style={globalStyles.scratchCanvas} />
           </div>
-          {isRevealed && prize && !prize.text.includes("Ritenta") && (
-              <button style={styles.ctaButton} onClick={handleSavePrize}>Salva Vincita</button>
-          )}
-          <button style={styles.modalButton} onClick={() => onGameEnd(prize)}>Torna alla Home</button>
+          {isRevealed && prize && !prize.text.includes("Ritenta") && <button style={globalStyles.ctaButton} onClick={handleSavePrize}>Salva Vincita</button>}
+          <button style={globalStyles.modalButton} onClick={() => onGameEnd(prize)}>Torna alla Home</button>
         </div>
       </div>
     );
   };
   
   const renderPaymentModal = () => (
-      <div style={styles.modalOverlay} onClick={() => setPaymentModalVisible(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-              <h2 style={styles.modalTitle}>Conferma Pagamento</h2>
-              <p style={styles.modalMessage}>Stai per saldare le commissioni per <b>{appointments.length} appuntamenti</b> (totale commissioni: €{(appointments.length * commissionFee).toFixed(2)}) e i costi di generazione promozioni (totale: €{(promotionsGeneratedCount * promotionGenerationFee).toFixed(2)}), per un totale di <b>€{(appointments.length * commissionFee + promotionsGeneratedCount * promotionGenerationFee).toFixed(2)}</b>.</p>
-              <button style={styles.ctaButton} onClick={handleAccountingClosure}>Conferma e Paga Ora</button>
-              <button style={styles.modalButton} onClick={() => setPaymentModalVisible(false)}>Annulla</button>
+      <div style={globalStyles.modalOverlay} onClick={() => setPaymentModalVisible(false)}>
+          <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <h2 style={globalStyles.modalTitle}>Conferma Pagamento</h2>
+              <p style={globalStyles.modalMessage}>Stai per saldare le commissioni per <b>{appointments.length} appuntamenti</b> (totale: €{(appointments.length * commissionFee).toFixed(2)}) e i costi promozioni (totale: €{(promotionsGeneratedCount * promotionGenerationFee).toFixed(2)}), per un totale di <b>€{(appointments.length * commissionFee + promotionsGeneratedCount * promotionGenerationFee).toFixed(2)}</b>.</p>
+              <button style={globalStyles.ctaButton} onClick={handleAccountingClosure}>Conferma e Paga Ora</button>
+              <button style={globalStyles.modalButton} onClick={() => setPaymentModalVisible(false)}>Annulla</button>
           </div>
       </div>
   );
 
   const renderHairdresserLoginModal = () => (
-      <div style={styles.modalOverlay} onClick={() => setHairdresserLoginModalModalVisible(false)}>
-        <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Accesso Area Riservata</h2>
-            <input 
-                type="password" 
-                style={styles.inputField} 
-                placeholder="Password"
-                value={hairdresserPasswordInput}
-                onChange={(e) => setHairdresserPasswordInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleHairdresserLogin()}
-            />
-            <button style={styles.ctaButton} onClick={handleHairdresserLogin}>Accedi</button>
+      <div style={globalStyles.modalOverlay} onClick={() => setHairdresserLoginModalVisible(false)}>
+        <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={globalStyles.modalTitle}>Accesso Area Riservata</h2>
+            <input type="password" style={globalStyles.inputField} placeholder="Password" value={hairdresserPasswordInput} onChange={(e) => setHairdresserPasswordInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleHairdresserLogin()} />
+            <button style={globalStyles.ctaButton} onClick={handleHairdresserLogin}>Accedi</button>
         </div>
       </div>
   );
 
   const renderSuperAdminModal = () => (
-    <div style={styles.modalOverlay} onClick={() => setSuperAdminVisible(false)}>
-        <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h2 style={styles.modalTitle}>Pannello di Controllo FreeCent</h2>
-            
-            <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Gestione Password Parrucchiere</h3>
-                <input type="text" value={tempHairdresserPassword} onChange={(e) => setTempHairdresserPassword(e.target.value)} placeholder="Nuova password" style={styles.inputField} />
-                <button onClick={saveHairdresserPassword} style={styles.smallButton}>Salva Password</button>
+    <div style={globalStyles.modalOverlay} onClick={() => setSuperAdminVisible(false)}>
+        <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={globalStyles.modalTitle}>Pannello di Controllo FreeCent</h2>
+            <div style={globalStyles.settingsSection}>
+                <h3 style={globalStyles.subSectionTitle}>Gestione Password Parrucchiere</h3>
+                <input type="text" value={tempHairdresserPassword} onChange={(e) => setTempHairdresserPassword(e.target.value)} placeholder="Nuova password" style={globalStyles.inputField} />
+                <button onClick={saveHairdresserPassword} style={globalStyles.smallButton}>Salva Password</button>
             </div>
-
-            {/* Nuovo: Sezione per le Informazioni del Salone */}
-            <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Informazioni Salone</h3>
-                <label style={styles.aiFormLabel}>Nome Salone:</label>
-                <input type="text" value={tempSalonName} onChange={(e) => setTempSalonName(e.target.value)} placeholder="Nome del salone" style={styles.inputField} />
-                <label style={styles.aiFormLabel}>Indirizzo Salone:</label>
-                <input type="text" value={tempSalonAddress} onChange={(e) => setTempSalonAddress(e.target.value)} placeholder="Indirizzo del salone" style={styles.inputField} />
-                <label style={styles.aiFormLabel}>Numero di Telefono:</label>
-                <input type="text" value={tempSalonPhone} onChange={(e) => setTempSalonPhone(e.target.value)} placeholder="Numero di telefono" style={styles.inputField} />
-                <button onClick={handleSaveSalonInfo} style={styles.smallButton}>Salva Info Salone</button>
-
-                <h4 style={{...styles.subSectionTitle, marginTop: '20px'}}>Gestione Logo Salone</h4>
-                {salonLogoUrlFromFirestore && (
-                    <img src={salonLogoUrlFromFirestore} alt="Logo attuale" style={{width: '80px', height: '80px', borderRadius: '50%', display: 'block', margin: '10px auto', border: '1px solid #e6c300'}} />
-                )}
-                <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => setTempLogoFile(e.target.files ? e.target.files[0] : null)} 
-                    style={{...styles.inputField, padding: '10px', height: 'auto'}} 
-                />
-                <button onClick={handleLogoUpload} style={styles.smallButton} disabled={!tempLogoFile}>Carica Nuovo Logo</button>
+            <div style={globalStyles.settingsSection}>
+                <h3 style={globalStyles.subSectionTitle}>Informazioni Salone</h3>
+                <label style={globalStyles.aiFormLabel}>Nome Salone:</label>
+                <input type="text" value={tempSalonName} onChange={(e) => setTempSalonName(e.target.value)} placeholder="Nome del salone" style={globalStyles.inputField} />
+                <label style={globalStyles.aiFormLabel}>Indirizzo Salone:</label>
+                <input type="text" value={tempSalonAddress} onChange={(e) => setTempSalonAddress(e.target.value)} placeholder="Indirizzo del salone" style={globalStyles.inputField} />
+                <label style={globalStyles.aiFormLabel}>Numero di Telefono:</label>
+                <input type="text" value={tempSalonPhone} onChange={(e) => setTempSalonPhone(e.target.value)} placeholder="Numero di telefono" style={globalStyles.inputField} />
+                <button onClick={handleSaveSalonInfo} style={globalStyles.smallButton}>Salva Info Salone</button>
+                <h4 style={{...globalStyles.subSectionTitle, marginTop: '20px'}}>Gestione Logo Salone</h4>
+                {salonLogoUrlFromFirestore && <img src={salonLogoUrlFromFirestore} alt="Logo attuale" style={{width: '80px', height: '80px', borderRadius: '50%', display: 'block', margin: '10px auto', border: '1px solid #e6c300'}} />}
+                <input type="file" accept="image/*" onChange={(e) => setTempLogoFile(e.target.files ? e.target.files[0] : null)} style={{...globalStyles.inputField, padding: '10px', height: 'auto'}} />
+                <button onClick={handleLogoUpload} style={globalStyles.smallButton} disabled={!tempLogoFile}>Carica Nuovo Logo</button>
                 {salonLogoUrlFromFirestore !== SALON_INFO.logoUrl && (
-                  <button onClick={() => {
-                    if (window.confirm("Sei sicuro di voler rimuovere il logo personalizzato?")) {
-                      updateDoc(doc(db, "settings", "appSettings"), { salonLogoUrl: SALON_INFO.logoUrl });
-                      setSalonLogoUrlFromFirestore(SALON_INFO.logoUrl);
-                      showAlert("Logo Rimosso", "Il logo personalizzato è stato rimosso e ripristinato a quello di default.");
-                    }
-                  }} style={{...styles.deleteButton, marginTop: '10px', width: '100%'}}>Ripristina Logo Default</button>
+                  <button onClick={() => { if (window.confirm("Sei sicuro di voler rimuovere il logo personalizzato?")) { updateDoc(doc(db, "settings", "appSettings"), { salonLogoUrl: SALON_INFO.logoUrl }); showAlert("Logo Rimosso", "Il logo personalizzato è stato ripristinato."); } }} style={{...globalStyles.deleteButton, marginTop: '10px', width: '100%'}}>Ripristina Logo Default</button>
                 )}
             </div>
-
-
-            <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Gestione Trattamenti</h3>
-                <ul style={styles.managementList}>
-                   {treatments.map(t => (
-                        <li key={t.id} style={styles.managementListItem}>
-                            <span>{t.name} - €{t.price} ({t.duration} min)</span>
-                            <button onClick={() => handleDeleteTreatment(t.id)} style={styles.deleteButton}>X</button>
-                        </li>
-                   ))}
+            <div style={globalStyles.settingsSection}>
+                <h3 style={globalStyles.subSectionTitle}>Gestione Trattamenti</h3>
+                <ul style={globalStyles.managementList}>
+                   {treatments.map(t => (<li key={t.id} style={globalStyles.managementListItem}><span>{t.name} - €{t.price} ({t.duration} min)</span><button onClick={() => handleDeleteTreatment(t.id)} style={globalStyles.deleteButton}>X</button></li>))}
                 </ul>
-                <input type="text" value={newTreatment.name} onChange={(e) => setNewTreatment({...newTreatment, name: e.target.value})} placeholder="Nome trattamento" style={{...styles.inputField, marginBottom: '10px'}} />
-                <input type="number" value={newTreatment.price} onChange={(e) => setNewTreatment({...newTreatment, price: e.target.value})} placeholder="Prezzo" style={{...styles.inputField, marginBottom: '10px'}} />
-                <input type="number" value={newTreatment.duration} onChange={(e) => setNewTreatment({...newTreatment, duration: e.target.value})} placeholder="Durata (min)" style={{...styles.inputField, marginBottom: '10px'}} />
-                <button onClick={handleAddTreatment} style={styles.smallButton}>Aggiungi Trattamento</button>
+                <input type="text" value={newTreatment.name} onChange={(e) => setNewTreatment({...newTreatment, name: e.target.value})} placeholder="Nome trattamento" style={{...globalStyles.inputField, marginBottom: '10px'}} />
+                <input type="number" value={newTreatment.price} onChange={(e) => setNewTreatment({...newTreatment, price: e.target.value})} placeholder="Prezzo" style={{...globalStyles.inputField, marginBottom: '10px'}} />
+                <input type="number" value={newTreatment.duration} onChange={(e) => setNewTreatment({...newTreatment, duration: e.target.value})} placeholder="Durata (min)" style={{...globalStyles.inputField, marginBottom: '10px'}} />
+                <button onClick={handleAddTreatment} style={globalStyles.smallButton}>Aggiungi Trattamento</button>
             </div>
-
-            <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Gestione Parrucchieri</h3>
-                <ul style={styles.managementList}>
+            <div style={globalStyles.settingsSection}>
+                <h3 style={globalStyles.subSectionTitle}>Gestione Parrucchieri</h3>
+                <ul style={globalStyles.managementList}>
                    {hairdressers.map(hd => (
-                        <li key={hd.id} style={styles.managementListItem}>
+                        <li key={hd.id} style={globalStyles.managementListItem}>
                             <span>{hd.name}</span>
                             <div>
-                                <button onClick={() => handleDeleteHairdresser(hd.id)} style={styles.deleteButton}>X</button>
-                                <button onClick={() => {
-                                    setEditingHairdresser(hd);
-                                    setTempHairdresserWorkingHours(hd.workingHours || {});
-                                    setTempHairdresserAbsentDates(hd.absentDates || []);
-                                }} style={styles.smallButton}>Modifica Orari</button>
+                                <button onClick={() => handleDeleteHairdresser(hd.id)} style={globalStyles.deleteButton}>X</button>
+                                <button onClick={() => { setEditingHairdresser(hd); setTempHairdresserWorkingHours(hd.workingHours || {}); setTempHairdresserAbsentDates(hd.absentDates || []); }} style={globalStyles.smallButton}>Modifica Orari</button>
                             </div>
                         </li>
                    ))}
                 </ul>
-                <input type="text" value={newHairdresserName} onChange={(e) => setNewHairdresserName(e.target.value)} placeholder="Nome nuovo parrucchiere" style={{...styles.inputField, marginBottom: '10px'}} />
-                <button onClick={handleAddHairdresser} style={styles.smallButton}>Aggiungi Parrucchiere</button>
+                <input type="text" value={newHairdresserName} onChange={(e) => setNewHairdresserName(e.target.value)} placeholder="Nome nuovo parrucchiere" style={{...globalStyles.inputField, marginBottom: '10px'}} />
+                <button onClick={handleAddHairdresser} style={globalStyles.smallButton}>Aggiungi Parrucchiere</button>
             </div>
-            
             {editingHairdresser && (
-                <div style={styles.modalOverlay}>
-                    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                        <h2 style={styles.modalTitle}>Modifica Orari per {editingHairdresser.name}</h2>
-                        <h4 style={styles.subSectionTitle}>Orari Settimanali</h4>
-                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
-                            <div key={day} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '10px' }}>
-                                <label style={{ flex: 1, textTransform: 'capitalize' }}>{day.charAt(0).toUpperCase() + day.slice(1)}:</label>
-                                <input
-                                    type="time"
-                                    value={tempHairdresserWorkingHours[day]?.start || ''}
-                                    onChange={(e) => setTempHairdresserWorkingHours(prev => ({
-                                        ...prev,
-                                        [day]: e.target.value ? { start: e.target.value, end: prev[day]?.end || '18:00' } : null
-                                    }))}
-                                    style={styles.inputField}
-                                />
-                                <span>-</span>
-                                <input
-                                    type="time"
-                                    value={tempHairdresserWorkingHours[day]?.end || ''}
-                                    onChange={(e) => setTempHairdresserWorkingHours(prev => ({
-                                        ...prev,
-                                        [day]: e.target.value ? { start: prev[day]?.start || '09:00', end: e.target.value } : null
-                                    }))}
-                                    style={styles.inputField}
-                                />
-                                <input
-                                    type="checkbox"
-                                    checked={tempHairdresserWorkingHours[day] === null}
-                                    onChange={(e) => setTempHairdresserWorkingHours(prev => ({
-                                        ...prev,
-                                        [day]: e.target.checked ? null : { start: '09:00', end: '18:00' }
-                                    }))}
-                                /> Riposo
-                            </div>
-                        ))}
-
-                        <h4 style={styles.subSectionTitle}>Date di Assenza (Ferie, Malattie, ecc.)</h4>
-                        <p style={styles.modalMessage}>Aggiungi date specifiche in cui il parrucchiere non sarà disponibile.</p>
-                        <input
-                            type="date"
-                            onChange={(e) => {
-                                const newDate = e.target.value;
-                                if (newDate && !tempHairdresserAbsentDates.includes(newDate)) {
-                                    setTempHairdresserAbsentDates(prev => [...prev, newDate].sort());
-                                }
-                            }}
-                            style={styles.inputField}
-                        />
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '10px' }}>
-                            {tempHairdresserAbsentDates.map(date => (
-                                <span key={date} style={{ backgroundColor: '#555', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    {new Date(date).toLocaleDateString('it-IT')}
-                                    <button onClick={() => setTempHairdresserAbsentDates(prev => prev.filter(d => d !== date))} style={{ background: 'none', border: 'none', color: '#d9534f', cursor: 'pointer', fontSize: '14px' }}>&times;</button>
-                                </span>
-                            ))}
+                <div style={globalStyles.modalOverlay}><div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <h2 style={globalStyles.modalTitle}>Modifica Orari per {editingHairdresser.name}</h2>
+                    <h4 style={globalStyles.subSectionTitle}>Orari Settimanali</h4>
+                    {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
+                        <div key={day} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '10px' }}>
+                            <label style={{ flex: 1, textTransform: 'capitalize' }}>{day.charAt(0).toUpperCase() + day.slice(1)}:</label>
+                            <input type="time" value={tempHairdresserWorkingHours[day]?.start || ''} onChange={(e) => setTempHairdresserWorkingHours(prev => ({...prev, [day]: e.target.value ? { start: e.target.value, end: prev[day]?.end || '18:00' } : null }))} style={globalStyles.inputField} />
+                            <span>-</span>
+                            <input type="time" value={tempHairdresserWorkingHours[day]?.end || ''} onChange={(e) => setTempHairdresserWorkingHours(prev => ({...prev, [day]: e.target.value ? { start: prev[day]?.start || '09:00', end: e.target.value } : null }))} style={globalStyles.inputField} />
+                            <input type="checkbox" checked={tempHairdresserWorkingHours[day] === null} onChange={(e) => setTempHairdresserWorkingHours(prev => ({...prev, [day]: e.target.checked ? null : { start: '09:00', end: '18:00' } }))} /> Riposo
                         </div>
-
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const hdRef = doc(db, "hairdressers", editingHairdresser.id);
-                                    await updateDoc(hdRef, {
-                                        workingHours: tempHairdresserWorkingHours,
-                                        absentDates: tempHairdresserAbsentDates,
-                                    });
-                                    setEditingHairdresser(null);
-                                    showAlert("Successo", "Orari parrucchiere aggiornati!");
-                                } catch (error: any) {
-                                    console.error("Errore nell'aggiornamento orari parrucchiere:", error);
-                                    showAlert("Errore", `Impossibile aggiornare gli orari: ${error.message || 'Errore sconosciuto'}`);
-                                }
-                            }}
-                            style={styles.ctaButton}
-                        >
-                            Salva Orari
-                        </button>
-                        <button style={styles.modalButton} onClick={() => setEditingHairdresser(null)}>Annulla</button>
+                    ))}
+                    <h4 style={globalStyles.subSectionTitle}>Date di Assenza</h4>
+                    <input type="date" onChange={(e) => { const newDate = e.target.value; if (newDate && !tempHairdresserAbsentDates.includes(newDate)) setTempHairdresserAbsentDates(prev => [...prev, newDate].sort()); }} style={globalStyles.inputField} />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '10px' }}>
+                        {tempHairdresserAbsentDates.map(date => (<span key={date} style={{ backgroundColor: '#555', padding: '5px 10px', borderRadius: '5px' }}>{new Date(date).toLocaleDateString('it-IT')}<button onClick={() => setTempHairdresserAbsentDates(prev => prev.filter(d => d !== date))} style={{ background: 'none', border: 'none', color: '#d9534f' }}>&times;</button></span>))}
                     </div>
-                </div>
+                    <button onClick={async () => { try { await updateDoc(doc(db, "hairdressers", editingHairdresser.id), { workingHours: tempHairdresserWorkingHours, absentDates: tempHairdresserAbsentDates, }); setEditingHairdresser(null); showAlert("Successo", "Orari aggiornati!"); } catch (error: any) { showAlert("Errore", `Impossibile aggiornare gli orari: ${error.message}`); } }} style={globalStyles.ctaButton}>Salva Orari</button>
+                    <button style={globalStyles.modalButton} onClick={() => setEditingHairdresser(null)}>Annulla</button>
+                </div></div>
             )}
-
-            <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Gestione Premi Gratta e Vinci</h3>
-                <ul style={styles.managementList}>
-                   {prizes.map((p) => (
-                        <li key={p.id} style={styles.managementListItem}>
-                            <span>{p.text}</span>
-                            <div style={styles.limitInputContainer}>
-                                <label>G:</label><input type="number" style={styles.limitInput} value={p.limits.daily} onChange={(e) => handlePrizeLimitChange(p.id, 'daily', e.target.value)} />
-                                <label>S:</label><input type="number" style={styles.limitInput} value={p.limits.weekly} onChange={(e) => handlePrizeLimitChange(p.id, 'weekly', e.target.value)} />
-                                <label>M:</label><input type="number" style={styles.limitInput} value={p.limits.monthly} onChange={(e) => handlePrizeLimitChange(p.id, 'monthly', e.target.value)} />
-                                {!p.text.includes('Ritenta') && <button onClick={() => handleDeletePrize(p.id)} style={styles.deleteButton}>X</button>}
-                            </div>
-                        </li>
-                   ))}
+            <div style={globalStyles.settingsSection}>
+                <h3 style={globalStyles.subSectionTitle}>Gestione Premi Gratta e Vinci</h3>
+                <ul style={globalStyles.managementList}>
+                   {prizes.map((p) => (<li key={p.id} style={globalStyles.managementListItem}><span>{p.text}</span><div style={globalStyles.limitInputContainer}><label>G:</label><input type="number" style={globalStyles.limitInput} value={p.limits.daily} onChange={(e) => handlePrizeLimitChange(p.id, 'daily', e.target.value)} /><label>S:</label><input type="number" style={globalStyles.limitInput} value={p.limits.weekly} onChange={(e) => handlePrizeLimitChange(p.id, 'weekly', e.target.value)} /><label>M:</label><input type="number" style={globalStyles.limitInput} value={p.limits.monthly} onChange={(e) => handlePrizeLimitChange(p.id, 'monthly', e.target.value)} />{!p.text.includes('Ritenta') && <button onClick={() => handleDeletePrize(p.id)} style={globalStyles.deleteButton}>X</button>}</div></li>))}
                 </ul>
-                <input type="text" value={newPrize} onChange={(e) => setNewPrize(e.target.value)} placeholder="Nuovo premio (testo)" style={{...styles.inputField, marginBottom: '10px'}} />
-                <button onClick={handleAddPrize} style={styles.smallButton}>Aggiungi Premio</button>
+                <input type="text" value={newPrize} onChange={(e) => setNewPrize(e.target.value)} placeholder="Nuovo premio (testo)" style={{...globalStyles.inputField, marginBottom: '10px'}} />
+                <button onClick={handleAddPrize} style={globalStyles.smallButton}>Aggiungi Premio</button>
             </div>
-
-            <div style={styles.settingsSection}>
-                <h3 style={styles.subSectionTitle}>Impostazioni Pagamenti</h3>
+            <div style={globalStyles.settingsSection}>
+                <h3 style={globalStyles.subSectionTitle}>Impostazioni Pagamenti e Soglie</h3>
                 {!areSettingsUnlocked ? (
-                    <div>
-                        <input type="password" value={settingsPassword} onChange={(e) => setSettingsPassword(e.target.value)} placeholder="Password Amministratore" style={styles.inputField} />
-                        <button onClick={unlockSettings} style={styles.smallButton}>Sblocca</button>
-                    </div>
+                    <div><input type="password" value={settingsPassword} onChange={(e) => setSettingsPassword(e.target.value)} placeholder="Password Amministratore" style={globalStyles.inputField} /><button onClick={unlockSettings} style={globalStyles.smallButton}>Sblocca</button></div>
                 ) : (
                     <div>
-                        <label style={{display: 'block', marginBottom: '10px'}}>Soglia di Pagamento Manuale (€)</label>
-                        <input type="number" value={tempThreshold} onChange={(e) => setTempThreshold(e.target.value)} style={styles.inputField} step="5" min="5" />
-                        
-                        <label style={{display: 'block', marginTop: '20px', marginBottom: '10px'}}>Costo Generazione Immagine Promozionale (€)</label>
-                        <input type="number" value={tempPromotionGenerationFee} onChange={(e) => setTempPromotionGenerationFee(e.target.value)} style={styles.inputField} step="1" min="0" />
+                        <label>Soglia Pagamento Manuale (€)</label><input type="number" value={tempThreshold} onChange={(e) => setTempThreshold(e.target.value)} style={globalStyles.inputField} step="5" min="5" />
+                        <label>Costo Generazione Promo (€)</label><input type="number" value={tempPromotionGenerationFee} onChange={(e) => setTempPromotionGenerationFee(e.target.value)} style={globalStyles.inputField} step="1" min="0" />
+                        <label>Commissione per Appuntamento (€)</label><input type="number" value={tempCommissionFee} onChange={(e) => setTempCommissionFee(e.target.value)} style={globalStyles.inputField} step="0.10" min="0" />
+                        <label>Soglia Pagamento Automatico (€)</label><input type="number" value={tempAutoPaymentThreshold} onChange={(e) => setTempAutoPaymentThreshold(e.target.value)} style={globalStyles.inputField} step="10" min="10" />
+                        <button onClick={saveSettings} style={globalStyles.smallButton}>Salva Impostazioni</button>
 
-                        <label style={{display: 'block', marginTop: '20px', marginBottom: '10px'}}>Commissione per Appuntamento (€)</label>
-                        <input type="number" value={tempCommissionFee} onChange={(e) => setTempCommissionFee(e.target.value)} style={styles.inputField} step="0.10" min="0" />
+                        <hr style={{border: '1px solid #444', margin: '20px 0'}}/>
 
-                        <label style={{display: 'block', marginTop: '20px', marginBottom: '10px'}}>Soglia Pagamento Automatico (€)</label>
-                        <input type="number" value={tempAutoPaymentThreshold} onChange={(e) => setTempAutoPaymentThreshold(e.target.value)} style={styles.inputField} step="10" min="10" />
-
-                        <button onClick={saveSettings} style={styles.smallButton}>Salva Impostazioni Pagamenti</button>
+                        <h4 style={globalStyles.subSectionTitle}>Sblocco App Temporaneo</h4>
+                        <p style={{...globalStyles.summaryText, fontSize: '14px', marginBottom: '10px'}}>Se l'app è bloccata, puoi impostare una nuova soglia temporanea qui per sbloccarla fino alla prossima chiusura contabile.</p>
+                        <label>Nuova Soglia Temporanea (€)</label>
+                        <input 
+                            type="number" 
+                            value={tempUnlockThresholdInput} 
+                            onChange={(e) => setTempUnlockThresholdInput(e.target.value)} 
+                            style={globalStyles.inputField}
+                            placeholder={`Maggiore del debito attuale`}
+                        />
+                        <button onClick={handleSetTemporaryThreshold} style={globalStyles.smallButton}>Imposta Soglia Temporanea</button>
                     </div>
                 )}
             </div>
-
-            <button style={styles.modalButton} onClick={() => setSuperAdminVisible(false)}>Chiudi Pannello</button>
+            <button style={globalStyles.modalButton} onClick={() => setSuperAdminVisible(false)}>Chiudi Pannello</button>
         </div>
     </div>
   );
 
     const PaymentSetupModal = () => {
-        if (!selectedHairdresserForPayment) return null;
-
         const handleSubmitCard = async () => {
             try {
                 showAlert("Elaborazione...", "Invio dettagli di pagamento...");
-                const simulatedCustomerId = `cus_${Math.random().toString(36).substring(2, 15)}`;
-                const updatedHairdressers = hairdressers.map(hd =>
-                    hd.id === selectedHairdresserForPayment.id ? { ...hd, stripeCustomerId: simulatedCustomerId } : hd
-                );
-                setHairdressers(updatedHairdressers);
-                await updateDoc(doc(db, "hairdressers", selectedHairdresserForPayment.id), { stripeCustomerId: simulatedCustomerId });
-                showAlert("Successo (Simulato)", "Metodo di pagamento configurato! (Simulato)");
+                const simulatedCustomerId = `cus_salon_${Math.random().toString(36).substring(2, 15)}`;
+                
+                await updateDoc(doc(db, "settings", "appSettings"), { salonStripeCustomerId: simulatedCustomerId });
+                
+                setSalonStripeCustomerId(simulatedCustomerId);
+                
+                showAlert("Successo (Simulato)", "Metodo di pagamento per il salone configurato! (Simulato)");
                 setIsPaymentSetupModalVisible(false);
 
             } catch (error) {
-                console.error("Errore durante la configurazione del pagamento:", error);
+                console.error("Errore configurazione pagamento:", error);
                 showAlert("Errore", "Impossibile configurare il pagamento. Riprova.");
             }
         };
 
         return (
-            <div style={styles.modalOverlay} onClick={() => setIsPaymentSetupModalVisible(false)}>
-                <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                    <h2 style={styles.modalTitle}>Configura Pagamento Automatico per {selectedHairdresserForPayment.name}</h2>
-                    <p style={styles.modalMessage}>Inserisci i dettagli della carta di credito. I pagamenti saranno elaborati automaticamente al raggiungimento della soglia impostata dall'amministratore (€{autoPaymentThreshold.toFixed(2)}).</p>
+            <div style={globalStyles.modalOverlay} onClick={() => setIsPaymentSetupModalVisible(false)}>
+                <div style={globalStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <h2 style={globalStyles.modalTitle}>Configura Pagamento Automatico Salone</h2>
+                    <p style={globalStyles.modalMessage}>Inserisci i dettagli della carta di credito del salone. I pagamenti saranno elaborati automaticamente al raggiungimento della soglia (€
+{autoPaymentThreshold.toFixed(2)}).</p>
                     
                     <div style={{ padding: '20px', border: '1px dashed #e6c300', borderRadius: '8px', marginBottom: '20px', color: '#ccc' }}>
-                        [Qui si integrerebbe il form della carta di credito di un gateway come Stripe Elements]
-                        <input type="text" placeholder="Numero Carta (placeholder)" style={{...styles.inputField, marginTop: '10px'}} />
+                        [Qui si integrerebbe il form di Stripe Elements]
+                        <input type="text" placeholder="Numero Carta (simulato)" style={{...globalStyles.inputField, marginTop: '10px'}} />
                         <div style={{display: 'flex', gap: '10px'}}>
-                            <input type="text" placeholder="MM/AA (placeholder)" style={{...styles.inputField, flex: 1}} />
-                            <input type="text" placeholder="CVC (placeholder)" style={{...styles.inputField, flex: 1}} />
+                            <input type="text" placeholder="MM/AA (simulato)" style={{...globalStyles.inputField, flex: 1}} />
+                            <input type="text" placeholder="CVC (simulato)" style={{...globalStyles.inputField, flex: 1}} />
                         </div>
                     </div>
                     
-                    <button style={styles.ctaButton} onClick={handleSubmitCard}>Salva Carta</button>
-                    <button style={styles.modalButton} onClick={() => setIsPaymentSetupModalVisible(false)}>Annulla</button>
+                    <button style={globalStyles.ctaButton} onClick={handleSubmitCard}>Salva Carta</button>
+                    <button style={globalStyles.modalButton} onClick={() => setIsPaymentSetupModalVisible(false)}>Annulla</button>
                 </div>
             </div>
         );
@@ -2549,60 +2104,43 @@ export default function App() {
 
 
   return (
-    <div style={styles.container}>
-        {/* Global styles for animations */}
+    <div style={globalStyles.container}>
         <style>{`
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
           @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(217, 83, 79, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(217, 83, 79, 0); } 100% { box-shadow: 0 0 0 0 rgba(217, 83, 79, 0); } }
         `}</style>
       
-      {/* Splash Screen */}
       {isSplashVisible && activePromotionImage && (
-            <div style={{...styles.splashScreen, ...(isSplashVisible ? {} : styles.splashScreenHidden)}}>
-                <img src={activePromotionImage} alt="Promozione speciale" style={styles.splashImage} />
+            <div style={{...globalStyles.splashScreen, ...(isSplashVisible ? {} : globalStyles.splashScreenHidden)}}>
+                <img src={activePromotionImage} alt="Promozione speciale" style={globalStyles.splashImage} />
             </div>
       )}
       
-      {/* Main App Content - Hidden if splash screen is visible */}
       <div style={{ visibility: isSplashVisible ? 'hidden' : 'visible' }}>
         {screen === 'home' && renderHomeScreen()}
         {screen === 'booking' && renderBookingScreen()}
         {screen === 'admin' && renderAdminScreen()}
       </div>
       
-      {/* Confirmation Modal */}
       {isConfModalVisible && (
-        <div style={styles.modalOverlay}>
-            <div style={styles.modalContent}>
-                <h2 style={styles.modalTitle}>Grazie!</h2>
-                <p style={styles.modalMessage}>Il tuo appuntamento è stato confermato con successo.</p>
-                <button style={styles.modalButton} onClick={handleCloseConfirmationModal}>Scopri il tuo premio!</button>
+        <div style={globalStyles.modalOverlay}>
+            <div style={globalStyles.modalContent}>
+                <h2 style={globalStyles.modalTitle}>Grazie!</h2>
+                <p style={globalStyles.modalMessage}>Il tuo appuntamento è stato confermato con successo.</p>
+                <button style={globalStyles.modalButton} onClick={handleCloseConfirmationModal}>Scopri il tuo premio!</button>
             </div>
         </div>
       )}
 
-      {/* AI Modals */}
       {isAiModalVisible && <AiModal />}
       {isTreatmentModalVisible && <TreatmentModal />}
       {isReminderModalVisible && <ReminderModal />}
-      
-      {/* Game Modal */}
       {isGameModalVisible && <ScratchGameModal onGameEnd={handleGameEnd} />}
-      
-      {/* Payment and Admin Modals */}
       {isPaymentModalVisible && renderPaymentModal()}
       {isSuperAdminVisible && renderSuperAdminModal()}
       {isHairdresserLoginModalVisible && renderHairdresserLoginModal()}
       {isPaymentSetupModalVisible && <PaymentSetupModal />}
-
-      {/* Custom Alert Dialog */}
-      {alertDialog.visible && (
-        <AlertDialog
-          title={alertDialog.title}
-          message={alertDialog.message}
-          onClose={closeAlert}
-        />
-      )}
+      {alertDialog.visible && <AlertDialog title={alertDialog.title} message={alertDialog.message} onClose={closeAlert} />}
     </div>
   );
 }

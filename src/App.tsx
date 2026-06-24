@@ -1113,6 +1113,7 @@ export default function App() {
       }
       setIsGeneratingPromo(true);
       try {
+          console.log("[1] Inizio generazione promo");
           // Crea un div invisibile con il design della promo
           const promoDiv = document.createElement('div');
           promoDiv.style.position = 'absolute';
@@ -1138,6 +1139,7 @@ export default function App() {
           textDiv.style.textShadow = '2px 2px 12px rgba(0, 0, 0, 0.8)';
           textDiv.style.lineHeight = '1.2';
           promoDiv.appendChild(textDiv);
+          console.log("[2] Testo aggiunto");
 
           // Logo (opzionale)
           if (salonLogoUrlFromFirestore) {
@@ -1157,28 +1159,47 @@ export default function App() {
           }
 
           document.body.appendChild(promoDiv);
+          console.log("[3] Div aggiunto al body");
 
           // Converti il div a immagine con html2canvas
-          const canvas = await html2canvas(promoDiv, { scale: 1, useCORS: true, logging: false });
+          console.log("[4] Avvio html2canvas...");
+          const canvas = await html2canvas(promoDiv, { scale: 1, useCORS: true, logging: true });
+          console.log("[5] html2canvas completato, canvas size:", canvas.width, "x", canvas.height);
           document.body.removeChild(promoDiv);
 
           // Converti canvas a blob
+          console.log("[6] Inizio conversione canvas -> blob");
           const blob = await new Promise<Blob>((resolve, reject) => {
-              canvas.toBlob(b => b ? resolve(b) : reject(new Error("Canvas to blob failed")), 'image/png');
+              canvas.toBlob((b) => {
+                  if (b) {
+                      console.log("[7] Blob creato, size:", b.size, "bytes");
+                      resolve(b);
+                  } else {
+                      console.error("[7-ERR] Blob è null");
+                      reject(new Error("Canvas to blob failed"));
+                  }
+              }, 'image/png');
           });
 
           // Upload su Firebase
+          console.log("[8] Inizio upload Firebase");
           const imageFileName = `promotions/${Date.now()}.png`;
           const imageRef = ref(storage, imageFileName);
           await uploadBytes(imageRef, blob);
+          console.log("[9] Upload completato, ottengo URL...");
           const downloadURL = await getDownloadURL(imageRef);
+          console.log("[10] URL ottenuto:", downloadURL);
+
+          console.log("[11] Aggiorno Firestore...");
           await updateDoc(doc(db, "settings", "appSettings"), {
              activePromotionImageUrl: downloadURL,
              promotionsGeneratedCount: promotionsGeneratedCount + 1,
           });
+          console.log("[12] Firestore aggiornato!");
           showAlert("Successo", "Immagine promozionale creata e impostata!");
       } catch (error: any) {
-          console.error("Errore generazione immagine promo:", error);
+          console.error("❌ ERRORE GENERAZIONE PROMO:", error);
+          console.error("Stack:", error.stack);
           showAlert("Errore AI", `Errore durante la creazione dell'immagine: ${error.message || "Errore sconosciuto"}`);
       } finally {
           setIsGeneratingPromo(false);
